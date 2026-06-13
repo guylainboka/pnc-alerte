@@ -1,0 +1,71 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 📦 Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 📦 Install dependencies
+        run: |
+          npm install -g bun
+          bun install
+
+      - name: 🗑️ Remove API routes for static export
+        run: rm -rf src/app/api
+
+      - name: 🏗️ Build Next.js (static export)
+        run: CAPACITOR_BUILD=true npx next build
+        env:
+          DATABASE_URL: file:./dev.db
+
+      - name: 📱 Sync Capacitor
+        run: npx cap sync android
+
+      - name: ♻️ Restore API routes
+        run: |
+          mkdir -p src/app/api/chat
+          # Restore will happen from git on next checkout
+
+      - name: 🔨 Build Android APK (Debug)
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: 📤 Upload APK (Debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PNC-Alerte-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: 🔨 Build Android APK (Release)
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: 📤 Upload APK (Release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PNC-Alerte-release
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
