@@ -1,7 +1,7 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { ChevronLeft, Send, Bot, User, Sparkles } from 'lucide-react'
+import { ChevronLeft, Send, Bot, User, Sparkles, Mic } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 interface Message {
@@ -27,11 +27,35 @@ const initialMessages: Message[] = [
   },
 ]
 
+// Fallback responses quand l'API n'est pas disponible
+const fallbackResponses: Record<string, string> = {
+  plainte: 'Pour déposer une plainte en ligne, utilisez la section "Dépôt de plainte" dans l\'application. Vous serez guidé en 5 étapes : Type de plainte > Détails des faits > Identification du suspect > Pièces justificatives > Validation. Vous recevrez un numéro de dossier unique au format PNCP-2026-XXXXX.',
+  vol: 'En cas de vol, signalez immédiatement l\'incident via la section "Signalement" ou activez le SOS si vous êtes en danger. Déposez ensuite une plainte en ligne ou au commissariat le plus proche. Conservez tous les preuves et témoignages.',
+  document: 'Les documents requis varient selon la démarche. Pour une déclaration de perte : pièce d\'identité. Pour une plainte : pièce d\'identité + preuves éventuelles. Pour une vérification de véhicule : numéro de plaque ou de châssis.',
+  commissariat: 'Utilisez la section "Commissariats" pour trouver le commissariat le plus proche. Vous pouvez les rechercher par nom ou localisation, obtenir l\'itinéraire GPS et consulter les horaires d\'ouverture.',
+  urgence: 'En cas d\'urgence, appuyez immédiatement sur le bouton SOS de l\'application. Vous pouvez aussi appeler directement : Police (117), SAMU (118), Pompiers (119).',
+  contact: 'Vous pouvez contacter la PNC via : Police (117), ou en vous rendant au commissariat le plus proche. L\'application PNC Alerte vous permet aussi de déposer des plaintes et de signaler des incidents en ligne.',
+  sos: 'Le bouton SOS est accessible depuis l\'écran d\'accueil ou le menu de navigation. En cas d\'urgence, appuyez dessus pour envoyer votre position et alerter les services de secours. Vous pouvez aussi appeler le 117 (Police), 118 (SAMU) ou 119 (Pompiers).',
+  alerte: 'Pour créer une alerte, utilisez la section "Signalement" de l\'application. Vous pouvez signaler un incident avec ou sans compte, de manière anonyme si vous le souhaitez. Décrivez l\'incident, ajoutez des photos et envoyez.',
+  disparition: 'Pour signaler une disparition, rendez-vous dans la section "Personnes disparues". Vous pourrez fournir les informations de la personne (nom, âge, signes distinctifs) et une photo. Signalez toujours une disparition suspecte le plus rapidement possible.',
+  verification: 'La vérification de véhicule est accessible depuis l\'accueil. Entrez le numéro de plaque d\'immatriculation ou le numéro de châssis pour vérifier si le véhicule est signalé volé ou soupçonneux.',
+  amende: 'Consultez vos amendes dans la section "Amendes" de l\'application. Vous pouvez les payer en ligne via MPesa, carte bancaire ou en espèces au guichet. Vérifiez régulièrement votre dossier.',
+}
+
+function getFallbackReply(message: string): string {
+  const lower = message.toLowerCase()
+  for (const [key, value] of Object.entries(fallbackResponses)) {
+    if (lower.includes(key)) return value
+  }
+  return 'Je suis l\'assistant IA de la PNC Alerte. Je suis là pour vous aider avec les procédures administratives, le dépôt de plainte, les vérifications de documents et les conseils de sécurité. Comment puis-je vous aider ?'
+}
+
 export default function AssistantScreen() {
   const { navigate, darkMode } = useAppStore()
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isListening, setIsListening] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
@@ -42,6 +66,31 @@ export default function AssistantScreen() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Saisie vocale via Web Speech API
+  const startVoiceInput = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('La saisie vocale n\'est pas disponible sur cet appareil')
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'fr-FR'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => setIsListening(true)
+    recognition.onend = () => setIsListening(false)
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setInput(transcript)
+    }
+
+    recognition.onerror = () => setIsListening(false)
+    recognition.start()
+  }
 
   const sendMessage = async (text?: string) => {
     const msg = text || input.trim()
@@ -59,27 +108,35 @@ export default function AssistantScreen() {
     setLoading(true)
 
     try {
+      // Essayer l'API route d'abord (mode web)
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg }),
       })
-      const data = await res.json()
+
+      if (res.ok) {
+        const data = await res.json()
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.reply || 'Désolé, je n\'ai pas pu traiter votre demande. Veuillez réessayer.',
+          time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+      } else {
+        throw new Error('API non disponible')
+      }
+    } catch {
+      // Fallback : réponses locales (mode Capacitor / hors ligne)
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.reply || 'Désolé, je n\'ai pas pu traiter votre demande. Veuillez réessayer.',
+        content: getFallbackReply(msg),
         time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       }
       setMessages((prev) => [...prev, assistantMessage])
-    } catch {
-      const fallbackMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Je suis l\'assistant IA de la PNC Alerte. Pour déposer une plainte, rendez-vous dans la section "Dépôt de plainte" de l\'application. Vous pouvez également vous rendre au commissariat le plus proche muni de votre pièce d\'identité et des documents justificatifs. En cas d\'urgence, utilisez le bouton SOS.',
-        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      }
-      setMessages((prev) => [...prev, fallbackMessage])
     } finally {
       setLoading(false)
     }
@@ -170,6 +227,15 @@ export default function AssistantScreen() {
       {/* Input */}
       <div className={`px-4 pb-2 pt-2 ${cardBg} border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'} transition-colors`}>
         <div className="flex items-center gap-2">
+          {/* Microphone */}
+          <button
+            onClick={startVoiceInput}
+            className={`w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition-transform ${
+              isListening ? 'bg-red-500 animate-pulse' : `${darkMode ? 'bg-[#1a2d5a]' : 'bg-gray-100'}`
+            }`}
+          >
+            <Mic className={`w-5 h-5 ${isListening ? 'text-white' : darkMode ? 'text-white' : 'text-gray-500'}`} />
+          </button>
           <input
             type="text"
             value={input}

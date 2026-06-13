@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PNC Alerte</string>
+    <string name="title_activity_main">PNC Alerte</string>
+    <string name="package_name">cd.gouv.pnc.alerte</string>
+    <string name="custom_url_scheme">cd.gouv.pnc.alerte</string>
+</resources>
