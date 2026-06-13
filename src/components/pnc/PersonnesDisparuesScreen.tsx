@@ -10,10 +10,15 @@ const missingPersons = [
 ]
 
 export default function PersonnesDisparuesScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
+
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] pb-20">
+    <div className={`min-h-screen ${bg} pb-20 transition-colors`}>
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('dashboard')} className="text-white">
@@ -25,26 +30,26 @@ export default function PersonnesDisparuesScreen() {
 
       <div className="px-6 pt-4 space-y-3">
         {missingPersons.map((person) => (
-          <div key={person.id} className="bg-white rounded-xl p-4 shadow-sm">
+          <div key={person.id} className={`${cardBg} rounded-xl p-4 shadow-sm transition-colors`}>
             <div className="flex items-start gap-3">
               <div className="w-14 h-14 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
                 <span className="text-2xl">{person.genre === 'M' ? '👦' : '👩'}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-[#0B2D6B]">{person.name}</h4>
-                <p className="text-xs text-gray-400 mt-0.5">{person.age} ans — {person.genre === 'M' ? 'Homme' : 'Femme'}</p>
+                <h4 className={`text-sm font-semibold ${textPrimary}`}>{person.name}</h4>
+                <p className={`text-xs ${textMuted} mt-0.5`}>{person.age} ans — {person.genre === 'M' ? 'Homme' : 'Femme'}</p>
                 <div className="flex items-center gap-3 mt-2">
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                  <span className={`text-[10px] ${textMuted} flex items-center gap-1`}>
                     <Calendar className="w-3 h-3" /> {person.dateDisparition}
                   </span>
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                  <span className={`text-[10px] ${textMuted} flex items-center gap-1`}>
                     <MapPin className="w-3 h-3" /> {person.lieu.split(',')[1]?.trim()}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 line-clamp-2">{person.description}</p>
+                <p className={`text-xs ${textMuted} mt-2 line-clamp-2`}>{person.description}</p>
               </div>
             </div>
-            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+            <div className={`flex gap-2 mt-3 pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-50'}`}>
               <button className="flex-1 py-2 bg-[#FF3B30]/10 text-[#FF3B30] rounded-lg text-xs font-medium flex items-center justify-center gap-1">
                 <Eye className="w-3.5 h-3.5" /> Signaler une observation
               </button>

@@ -7,10 +7,11 @@ import {
   BookOpen, Lock, ChevronRight, TrendingUp, Clock, Settings,
   Car, ScanLine, Siren, Gavel, Vault, Wallet, UserCheck
 } from 'lucide-react'
+import { useEffect, useCallback } from 'react'
 
 const quickActions: { icon: typeof FileText; label: string; screen: Screen; color: string; bg: string }[] = [
   { icon: AlertTriangle, label: 'Signaler', screen: 'signalement', color: '#FF3B30', bg: '#FFF0EF' },
-  { icon: Bell, label: 'Mes Alertes', screen: 'alertes', color: '#1E5EFF', bg: '#EBF0FF' },
+  { icon: Bell, label: 'Mes Alertes', screen: 'mes-alertes', color: '#1E5EFF', bg: '#EBF0FF' },
   { icon: BookOpen, label: 'Conseils', screen: 'conseils', color: '#0B9D5A', bg: '#EDFFF5' },
   { icon: MapPin, label: 'Commissariat', screen: 'commissariats', color: '#F59E0B', bg: '#FFF8EB' },
   { icon: MessageCircle, label: 'Assistant IA', screen: 'assistant', color: '#8B5CF6', bg: '#F3F0FF' },
@@ -42,8 +43,23 @@ const stats = [
 ]
 
 export default function DashboardScreen() {
-  const { navigate, userName, darkMode, setSelectedAlertId } = useAppStore()
+  const { navigate, userName, darkMode, setSelectedAlertId, userLatitude, setLocation } = useAppStore()
   const firstName = userName ? userName.split(' ')[0] : 'Citoyen'
+
+  const getUserLocation = useCallback(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation(pos.coords.latitude, pos.coords.longitude)
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [setLocation])
+
+  useEffect(() => {
+    if (!userLatitude) getUserLocation()
+  }, [userLatitude, getUserLocation])
 
   const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
   const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'

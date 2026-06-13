@@ -27,6 +27,15 @@ export default function ProfilScreen() {
 
   const menuSections = [
     {
+      title: 'Suivi',
+      items: [
+        { icon: FileText, label: 'Mes alertes & Suivi', screen: 'mes-alertes' as const, color: '#1E5EFF', desc: 'Suivi plaintes, signalements, SOS' },
+        { icon: Vault, label: 'Coffre-Fort', screen: 'coffre-fort' as const, color: '#F59E0B', desc: 'Documents chiffrés' },
+        { icon: Wallet, label: 'Mes amendes', screen: 'amendes' as const, color: '#0B9D5A', desc: 'Paiements et reçus' },
+        { icon: Award, label: 'Badges & Récompenses', screen: 'profil' as const, color: '#8B5CF6', desc: 'Citoyen Vigilant' },
+      ],
+    },
+    {
       title: 'Paramètres',
       items: [
         { icon: Bell, label: 'Notifications', screen: 'settings-notifications' as const, color: '#1E5EFF', desc: 'Gérer les alertes push' },
@@ -37,19 +46,10 @@ export default function ProfilScreen() {
       ],
     },
     {
-      title: 'Services',
-      items: [
-        { icon: FileText, label: 'Mes plaintes', screen: 'plainte' as const, color: '#EC4899', desc: 'Historique des dossiers' },
-        { icon: Vault, label: 'Coffre-Fort', screen: 'coffre-fort' as const, color: '#F59E0B', desc: 'Documents chiffrés' },
-        { icon: Wallet, label: 'Mes amendes', screen: 'amendes' as const, color: '#0B9D5A', desc: 'Paiements et reçus' },
-        { icon: Award, label: 'Badges & Récompenses', screen: 'profil' as const, color: '#8B5CF6', desc: 'Citoyen Vigilant' },
-      ],
-    },
-    {
       title: 'Aide',
       items: [
-        { icon: HelpCircle, label: 'Centre d\'aide', screen: 'conseils' as const, color: '#06B6D4', desc: 'FAQ et assistance' },
-        { icon: Info, label: 'À propos de PNC Alerte', screen: 'profil' as const, color: '#64748B', desc: 'Version 1.0.0' },
+        { icon: HelpCircle, label: 'Centre d\'aide', screen: 'conseils' as const, color: '#06B6D4', desc: 'Conseils de prévention' },
+        { icon: Info, label: 'À propos de PNC Alerte', screen: 'about' as const, color: '#64748B', desc: 'Version 1.0.0' },
       ],
     },
   ]

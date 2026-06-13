@@ -28,11 +28,16 @@ const initialMessages: Message[] = [
 ]
 
 export default function AssistantScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -81,7 +86,7 @@ export default function AssistantScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] flex flex-col pb-20">
+    <div className={`min-h-screen ${bg} flex flex-col pb-20 transition-colors`}>
       {/* Header */}
       <div className="bg-[#0B2D6B] pt-12 pb-4 px-6">
         <div className="flex items-center gap-3">
@@ -113,10 +118,10 @@ export default function AssistantScreen() {
             <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
               msg.role === 'user'
                 ? 'bg-[#1E5EFF] text-white rounded-br-md'
-                : 'bg-white text-gray-700 shadow-sm rounded-bl-md'
+                : `${cardBg} ${darkMode ? 'text-gray-200' : 'text-gray-700'} shadow-sm rounded-bl-md`
             }`}>
               <p className="text-sm leading-relaxed">{msg.content}</p>
-              <p className={`text-[9px] mt-1 ${msg.role === 'user' ? 'text-white/50' : 'text-gray-300'}`}>
+              <p className={`text-[9px] mt-1 ${msg.role === 'user' ? 'text-white/50' : textMuted}`}>
                 {msg.time}
               </p>
             </div>
@@ -133,11 +138,11 @@ export default function AssistantScreen() {
             <div className="w-7 h-7 rounded-full bg-[#1E5EFF] flex items-center justify-center flex-shrink-0 mt-1">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <div className="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+            <div className={`${cardBg} rounded-2xl rounded-bl-md px-4 py-3 shadow-sm`}>
               <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className={`w-2 h-2 ${darkMode ? 'bg-gray-500' : 'bg-gray-300'} rounded-full animate-bounce`} style={{ animationDelay: '0ms' }} />
+                <div className={`w-2 h-2 ${darkMode ? 'bg-gray-500' : 'bg-gray-300'} rounded-full animate-bounce`} style={{ animationDelay: '150ms' }} />
+                <div className={`w-2 h-2 ${darkMode ? 'bg-gray-500' : 'bg-gray-300'} rounded-full animate-bounce`} style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -153,7 +158,7 @@ export default function AssistantScreen() {
               <button
                 key={q}
                 onClick={() => sendMessage(q)}
-                className="px-3 py-1.5 bg-white rounded-full text-xs text-[#1E5EFF] font-medium shadow-sm active:scale-95 transition-transform"
+                className={`px-3 py-1.5 ${cardBg} rounded-full text-xs text-[#1E5EFF] font-medium shadow-sm active:scale-95 transition-transform`}
               >
                 {q}
               </button>
@@ -163,7 +168,7 @@ export default function AssistantScreen() {
       )}
 
       {/* Input */}
-      <div className="px-4 pb-2 pt-2 bg-white border-t border-gray-100">
+      <div className={`px-4 pb-2 pt-2 ${cardBg} border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'} transition-colors`}>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -171,7 +176,7 @@ export default function AssistantScreen() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             placeholder="Posez votre question..."
-            className="flex-1 px-4 py-3 bg-[#F5F6FA] rounded-xl text-sm outline-none"
+            className={`flex-1 px-4 py-3 ${bg} rounded-xl text-sm outline-none ${darkMode ? 'text-white' : ''}`}
           />
           <button
             onClick={() => sendMessage()}

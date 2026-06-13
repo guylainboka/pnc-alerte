@@ -16,7 +16,12 @@ const alertDetail = {
 }
 
 export default function AlerteDetailScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
+
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
 
   const severityColors: Record<string, string> = {
     high: '#FF3B30',
@@ -25,7 +30,7 @@ export default function AlerteDetailScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] pb-20">
+    <div className={`min-h-screen ${bg} pb-20 transition-colors`}>
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('alertes')} className="text-white">
@@ -37,26 +42,26 @@ export default function AlerteDetailScreen() {
 
       <div className="px-6 pt-4 space-y-4">
         {/* Main card */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
+        <div className={`${cardBg} rounded-xl p-5 shadow-sm transition-colors`}>
           <div className="flex items-start gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${severityColors[alertDetail.severity]}15` }}>
               <Shield className="w-5 h-5" style={{ color: severityColors[alertDetail.severity] }} />
             </div>
             <div className="flex-1">
-              <h2 className="text-base font-bold text-[#0B2D6B]">{alertDetail.title}</h2>
+              <h2 className={`text-base font-bold ${textPrimary}`}>{alertDetail.title}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">{alertDetail.type}</span>
-                <span className="text-[10px] text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3" />{alertDetail.time}</span>
+                <span className={`text-[10px] ${textMuted} flex items-center gap-1`}><Clock className="w-3 h-3" />{alertDetail.time}</span>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-gray-50 pt-3 mt-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-50'} pt-3 mt-3 space-y-2`}>
+            <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
               <MapPin className="w-3.5 h-3.5 text-[#1E5EFF]" />
               <span>{alertDetail.location}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
               <Shield className="w-3.5 h-3.5 text-[#1E5EFF]" />
               <span>Source : {alertDetail.source}</span>
             </div>
@@ -64,21 +69,27 @@ export default function AlerteDetailScreen() {
         </div>
 
         {/* Description */}
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-[#0B2D6B] mb-2">Description</h3>
-          <p className="text-sm text-gray-600 leading-relaxed">{alertDetail.description}</p>
-          <p className="text-[10px] text-gray-400 mt-3">Réf : {alertDetail.reference}</p>
+        <div className={`${cardBg} rounded-xl p-5 shadow-sm transition-colors`}>
+          <h3 className={`text-sm font-bold ${textPrimary} mb-2`}>Description</h3>
+          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>{alertDetail.description}</p>
+          <p className={`text-[10px] ${textMuted} mt-3`}>Réf : {alertDetail.reference}</p>
         </div>
 
         {/* Actions */}
         <div className="space-y-2">
-          <button className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.99] transition-transform">
+          <button onClick={() => navigate('signalement')} className={`w-full ${cardBg} rounded-xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.99] transition-transform`}>
             <Eye className="w-5 h-5 text-[#1E5EFF]" />
-            <span className="text-sm font-medium text-[#0B2D6B]">Signaler une observation</span>
+            <span className={`text-sm font-medium ${textPrimary}`}>Signaler une observation</span>
           </button>
-          <button className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.99] transition-transform">
+          <button onClick={async () => {
+            if (navigator.share) {
+              try {
+                await navigator.share({ title: `Alerte PNC: ${alertDetail.title}`, text: `${alertDetail.title}\n${alertDetail.description}\nRéf: ${alertDetail.reference}` })
+              } catch {}
+            }
+          }} className={`w-full ${cardBg} rounded-xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.99] transition-transform`}>
             <Share2 className="w-5 h-5 text-[#0B9D5A]" />
-            <span className="text-sm font-medium text-[#0B2D6B]">Partager cette alerte</span>
+            <span className={`text-sm font-medium ${textPrimary}`}>Partager cette alerte</span>
           </button>
         </div>
       </div>

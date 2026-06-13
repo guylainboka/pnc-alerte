@@ -1,8 +1,8 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { ChevronLeft, Camera, Mic, MapPin, EyeOff } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronLeft, Camera, Mic, MicOff, MapPin, EyeOff, Image, X, Share2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const categories = [
   { id: 'vol', label: 'Vol', emoji: '💰' },
@@ -16,37 +16,165 @@ const categories = [
 ]
 
 export default function SignalementScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode, userLatitude, userLongitude, setLocation, addUserAlert } = useAppStore()
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [attachments, setAttachments] = useState<string[]>([])
+  const [isRecording, setIsRecording] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [submittedRef, setSubmittedRef] = useState('')
+
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+
+  const getUserLocation = useCallback(() => {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation(pos.coords.latitude, pos.coords.longitude)
+        setLocating(false)
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [setLocation])
+
+  useEffect(() => {
+    if (!userLatitude) getUserLocation()
+  }, [userLatitude, getUserLocation])
+
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        setAttachments((prev) => [...prev, ev.target?.result as string])
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          setAttachments((prev) => [...prev, ev.target?.result as string])
+        }
+        reader.readAsDataURL(file)
+      })
+    }
+  }
+
+  const handleVoiceRecord = async () => {
+    if (isRecording && mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data)
+      }
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          setAttachments((prev) => [...prev, ev.target?.result as string])
+        }
+        reader.readAsDataURL(audioBlob)
+        stream.getTracks().forEach((track) => track.stop())
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch {
+      // Microphone access denied
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Signalement PNC Alerte',
+          text: `Signalement: ${category}\n${description}`,
+        })
+      } catch {}
+    }
+  }
+
+  const handleSubmit = () => {
+    const ref = `SIG-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+    setSubmittedRef(ref)
+    addUserAlert({
+      id: `UA-${Date.now()}`,
+      type: 'signalement',
+      title: `${categories.find((c) => c.id === category)?.label || 'Signalement'} — ${userLatitude ? 'Position GPS capturée' : 'Kinshasa'}`,
+      status: 'en-attente',
+      reference: ref,
+      date: new Date().toISOString().split('T')[0],
+      description,
+      updates: [
+        {
+          date: new Date().toISOString(),
+          status: 'Reçu',
+          message: 'Signalement enregistré par le centre opérationnel',
+        },
+      ],
+    })
+    setSubmitted(true)
+  }
+
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#F5F6FA] flex flex-col items-center justify-center px-6">
+      <div className={`min-h-screen ${bg} flex flex-col items-center justify-center px-6 transition-colors`}>
         <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
-          <span className="text-3xl">✓</span>
+          <span className="text-3xl text-green-600">✓</span>
         </div>
-        <h2 className="text-lg font-bold text-[#0B2D6B] mb-2">Signalement envoyé !</h2>
-        <p className="text-sm text-gray-500 text-center mb-2">
-          Référence : <span className="font-mono font-bold text-[#1E5EFF]">SIG-2026-A3K9F</span>
+        <h2 className={`text-lg font-bold ${textPrimary} mb-2`}>Signalement envoyé !</h2>
+        <p className={`text-sm ${textMuted} text-center mb-2`}>
+          Référence : <span className="font-mono font-bold text-[#1E5EFF]">{submittedRef}</span>
         </p>
-        <p className="text-xs text-gray-400 text-center mb-6">
+        <p className={`text-xs ${textMuted} text-center mb-6`}>
           Votre signalement a été transmis au centre opérationnel de la PNC.
         </p>
-        <button
-          onClick={() => navigate('dashboard')}
-          className="px-8 py-3 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm"
-        >
-          Retour à l&apos;accueil
-        </button>
+        <div className="flex gap-3 w-full">
+          <button onClick={() => navigate('mes-alertes')} className="flex-1 py-3 bg-[#0B9D5A] text-white rounded-xl font-semibold text-sm">
+            Voir le suivi
+          </button>
+          <button onClick={() => navigate('dashboard')} className="flex-1 py-3 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm">
+            Accueil
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] flex flex-col pb-6">
+    <div className={`min-h-screen ${bg} flex flex-col pb-6 transition-colors`}>
       {/* Header */}
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
@@ -59,12 +187,12 @@ export default function SignalementScreen() {
 
       <div className="flex-1 px-6 pt-4 space-y-5 overflow-y-auto">
         {/* Anonymous toggle */}
-        <div className="bg-white rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div className={`${cardBg} rounded-xl p-4 flex items-center justify-between shadow-sm transition-colors`}>
           <div className="flex items-center gap-3">
             <EyeOff className="w-5 h-5 text-[#8B5CF6]" />
             <div>
-              <p className="text-sm font-medium text-[#0B2D6B]">Signalement anonyme</p>
-              <p className="text-[10px] text-gray-400">Masquer votre identité</p>
+              <p className={`text-sm font-medium ${textPrimary}`}>Signalement anonyme</p>
+              <p className={`text-[10px] ${textMuted}`}>Masquer votre identité</p>
             </div>
           </div>
           <button
@@ -83,7 +211,7 @@ export default function SignalementScreen() {
 
         {/* Category */}
         <div>
-          <h3 className="text-sm font-bold text-[#0B2D6B] mb-3">Catégorie d&apos;incident</h3>
+          <h3 className={`text-sm font-bold ${textPrimary} mb-3`}>Catégorie d&apos;incident</h3>
           <div className="grid grid-cols-2 gap-2">
             {categories.map((cat) => (
               <button
@@ -92,7 +220,7 @@ export default function SignalementScreen() {
                 className={`p-3 rounded-xl text-left flex items-center gap-2 transition-all ${
                   category === cat.id
                     ? 'bg-[#1E5EFF] text-white shadow-md shadow-blue-500/20'
-                    : 'bg-white text-gray-600 shadow-sm'
+                    : `${cardBg} ${textPrimary} shadow-sm`
                 }`}
               >
                 <span className="text-lg">{cat.emoji}</span>
@@ -102,52 +230,118 @@ export default function SignalementScreen() {
           </div>
         </div>
 
-        {/* Description */}
+        {/* Description with voice dictation */}
         <div>
-          <h3 className="text-sm font-bold text-[#0B2D6B] mb-2">Description</h3>
+          <h3 className={`text-sm font-bold ${textPrimary} mb-2`}>Description</h3>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Décrivez l'incident en détail..."
             rows={4}
-            className="w-full px-4 py-3 bg-white rounded-xl text-sm border border-gray-100 focus:border-[#1E5EFF] outline-none transition-all resize-none shadow-sm"
+            className={`w-full px-4 py-3 ${cardBg} rounded-xl text-sm border border-gray-100 dark:border-gray-700 focus:border-[#1E5EFF] outline-none transition-all resize-none shadow-sm ${darkMode ? 'text-white' : ''}`}
           />
-          <button className="flex items-center gap-1.5 text-xs text-[#1E5EFF] font-medium mt-2">
-            <Mic className="w-4 h-4" /> Dicter avec la voix
+          <button
+            onClick={handleVoiceRecord}
+            className={`flex items-center gap-1.5 text-xs font-medium mt-2 px-3 py-1.5 rounded-lg transition-all ${
+              isRecording ? 'bg-[#FF3B30]/10 text-[#FF3B30]' : 'text-[#1E5EFF] bg-[#1E5EFF]/5'
+            }`}
+          >
+            {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            {isRecording ? 'Arrêter l\'enregistrement...' : 'Dicter avec la voix'}
           </button>
         </div>
 
         {/* Location */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className={`${cardBg} rounded-xl p-4 shadow-sm transition-colors`}>
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-[#1E5EFF]" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-[#0B2D6B]">Position GPS</p>
-              <p className="text-xs text-gray-400">-4.4419° S, 15.2663° E — Kinshasa, Gombe</p>
+              <p className={`text-sm font-medium ${textPrimary}`}>Position GPS</p>
+              <p className={`text-xs ${textMuted}`}>
+                {userLatitude
+                  ? `${userLatitude.toFixed(4)}° S, ${userLongitude?.toFixed(4)}° E — Capturée`
+                  : 'Acquisition de la position...'}
+              </p>
             </div>
-            <span className="text-[10px] text-green-500 font-medium">Capturée</span>
+            <button onClick={getUserLocation} disabled={locating} className="text-[10px] text-[#1E5EFF] font-medium">
+              {locating ? '...' : 'Rafraîchir'}
+            </button>
           </div>
         </div>
 
         {/* Attachments */}
         <div>
-          <h3 className="text-sm font-bold text-[#0B2D6B] mb-2">Pièces jointes</h3>
+          <h3 className={`text-sm font-bold ${textPrimary} mb-2`}>Pièces jointes</h3>
+
+          {/* Preview attachments */}
+          {attachments.length > 0 && (
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+              {attachments.map((att, idx) => (
+                <div key={idx} className="relative flex-shrink-0">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                    {att.startsWith('data:audio') ? (
+                      <div className="w-full h-full bg-[#8B5CF6]/10 flex items-center justify-center">
+                        <Mic className="w-8 h-8 text-[#8B5CF6]" />
+                      </div>
+                    ) : (
+                      <img src={att} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <button
+                    onClick={() => removeAttachment(idx)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#FF3B30] rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-3">
-            <button className="w-20 h-20 bg-white rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 shadow-sm">
-              <Camera className="w-6 h-6 text-gray-400" />
-              <span className="text-[9px] text-gray-400">Photo</span>
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
+            <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple onChange={handleGallerySelect} className="hidden" />
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform`}
+            >
+              <Camera className="w-6 h-6 text-[#1E5EFF]" />
+              <span className={`text-[9px] ${textMuted}`}>Caméra</span>
             </button>
-            <button className="w-20 h-20 bg-white rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 shadow-sm">
-              <Mic className="w-6 h-6 text-gray-400" />
-              <span className="text-[9px] text-gray-400">Audio</span>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform`}
+            >
+              <Image className="w-6 h-6 text-[#0B9D5A]" />
+              <span className={`text-[9px] ${textMuted}`}>Galerie</span>
+            </button>
+            <button
+              onClick={handleVoiceRecord}
+              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform ${
+                isRecording ? 'border-[#FF3B30]' : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
+              {isRecording ? <MicOff className="w-6 h-6 text-[#FF3B30]" /> : <Mic className="w-6 h-6 text-[#8B5CF6]" />}
+              <span className={`text-[9px] ${textMuted}`}>{isRecording ? 'Stop' : 'Audio'}</span>
             </button>
           </div>
-          <p className="text-[10px] text-gray-400 mt-1">Maximum 50 MB par signalement</p>
+          <p className={`text-[10px] ${textMuted} mt-1`}>Maximum 50 MB par signalement</p>
         </div>
+
+        {/* Share button */}
+        {category && description && (
+          <button
+            onClick={handleShare}
+            className={`w-full ${cardBg} rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform`}
+          >
+            <Share2 className="w-4 h-4 text-[#1E5EFF]" />
+            <span className={`text-sm font-medium ${textPrimary}`}>Partager le signalement</span>
+          </button>
+        )}
 
         {/* Submit */}
         <button
-          onClick={() => setSubmitted(true)}
+          onClick={handleSubmit}
           disabled={!category || !description}
           className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-40 disabled:shadow-none"
         >

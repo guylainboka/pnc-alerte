@@ -10,6 +10,7 @@ import DashboardScreen from '@/components/pnc/DashboardScreen'
 import SOSScreen from '@/components/pnc/SOSScreen'
 import SignalementScreen from '@/components/pnc/SignalementScreen'
 import AlertesScreen from '@/components/pnc/AlertesScreen'
+import AlerteDetailScreen from '@/components/pnc/AlerteDetailScreen'
 import CarteScreen from '@/components/pnc/CarteScreen'
 import CommissariatsScreen from '@/components/pnc/CommissariatsScreen'
 import PlainteScreen from '@/components/pnc/PlainteScreen'
@@ -18,6 +19,7 @@ import VerificationVehiculeScreen from '@/components/pnc/VerificationVehiculeScr
 import PersonnesDisparuesScreen from '@/components/pnc/PersonnesDisparuesScreen'
 import ConvocationsScreen from '@/components/pnc/ConvocationsScreen'
 import ConseilsScreen from '@/components/pnc/ConseilsScreen'
+import ConseilDetailScreen from '@/components/pnc/ConseilDetailScreen'
 import AssistantScreen from '@/components/pnc/AssistantScreen'
 import CoffreFortScreen from '@/components/pnc/CoffreFortScreen'
 import AmendesScreen from '@/components/pnc/AmendesScreen'
@@ -30,7 +32,9 @@ import SettingsSecurityScreen from '@/components/pnc/SettingsSecurityScreen'
 import SettingsLanguageScreen from '@/components/pnc/SettingsLanguageScreen'
 import SettingsGeolocationScreen from '@/components/pnc/SettingsGeolocationScreen'
 import SettingsOfflineScreen from '@/components/pnc/SettingsOfflineScreen'
-import AlerteDetailScreen from '@/components/pnc/AlerteDetailScreen'
+import MesAlertesScreen from '@/components/pnc/MesAlertesScreen'
+import UrgenceNumerosScreen from '@/components/pnc/UrgenceNumerosScreen'
+import AboutScreen from '@/components/pnc/AboutScreen'
 import BottomNav from '@/components/pnc/BottomNav'
 
 const screensWithNav = ['dashboard', 'alertes', 'sos', 'assistant', 'profil']
@@ -49,6 +53,7 @@ export default function Home() {
     signalement: <SignalementScreen />,
     'signalement-anonyme': <SignalementScreen />,
     alertes: <AlertesScreen />,
+    'mes-alertes': <MesAlertesScreen />,
     carte: <CarteScreen />,
     commissariats: <CommissariatsScreen />,
     plainte: <PlainteScreen />,
@@ -57,6 +62,7 @@ export default function Home() {
     'personnes-disparues': <PersonnesDisparuesScreen />,
     convocations: <ConvocationsScreen />,
     conseils: <ConseilsScreen />,
+    'conseil-detail': <ConseilDetailScreen />,
     assistant: <AssistantScreen />,
     'coffre-fort': <CoffreFortScreen />,
     amendes: <AmendesScreen />,
@@ -70,6 +76,9 @@ export default function Home() {
     'settings-geolocation': <SettingsGeolocationScreen />,
     'settings-offline': <SettingsOfflineScreen />,
     'alerte-detail': <AlerteDetailScreen />,
+    'suivi-plainte': <MesAlertesScreen />,
+    'urgence-numeros': <UrgenceNumerosScreen />,
+    about: <AboutScreen />,
   }
 
   const showNav = screensWithNav.includes(currentScreen)

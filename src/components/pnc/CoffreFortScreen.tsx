@@ -12,13 +12,18 @@ const documentTypes = [
 ]
 
 export default function CoffreFortScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
   const [authenticated, setAuthenticated] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
+
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-[#F5F6FA] flex flex-col">
+      <div className={`min-h-screen ${bg} flex flex-col transition-colors`}>
         <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('dashboard')} className="text-white">
@@ -32,8 +37,8 @@ export default function CoffreFortScreen() {
           <div className="w-20 h-20 rounded-3xl bg-[#1E5EFF]/10 flex items-center justify-center mb-4">
             <Lock className="w-10 h-10 text-[#1E5EFF]" />
           </div>
-          <h2 className="text-lg font-bold text-[#0B2D6B] mb-2">Accès sécurisé</h2>
-          <p className="text-sm text-gray-400 text-center mb-6">
+          <h2 className={`text-lg font-bold ${textPrimary} mb-2`}>Accès sécurisé</h2>
+          <p className={`text-sm ${textMuted} text-center mb-6`}>
             Authentifiez-vous pour accéder à vos documents chiffrés (AES-256).
           </p>
           <button
@@ -53,7 +58,7 @@ export default function CoffreFortScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] pb-20">
+    <div className={`min-h-screen ${bg} pb-20 transition-colors`}>
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('dashboard')} className="text-white">
@@ -72,12 +77,12 @@ export default function CoffreFortScreen() {
 
         {/* Document types */}
         {documentTypes.map((doc) => (
-          <div key={doc.id} className="bg-white rounded-xl p-4 shadow-sm">
+          <div key={doc.id} className={`${cardBg} rounded-xl p-4 shadow-sm transition-colors`}>
             <div className="flex items-center gap-3">
               <span className="text-2xl">{doc.icon}</span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-[#0B2D6B]">{doc.label}</p>
-                <p className="text-[10px] text-gray-400">{doc.count} document(s) stocké(s)</p>
+                <p className={`text-sm font-medium ${textPrimary}`}>{doc.label}</p>
+                <p className={`text-[10px] ${textMuted}`}>{doc.count} document(s) stocké(s)</p>
               </div>
               <button className="w-8 h-8 rounded-lg bg-[#FF3B30]/10 flex items-center justify-center">
                 <Trash2 className="w-4 h-4 text-[#FF3B30]" />
@@ -87,7 +92,7 @@ export default function CoffreFortScreen() {
         ))}
 
         {/* Add button */}
-        <button className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2 text-sm text-gray-400 font-medium mt-2">
+        <button className={`w-full py-3 border-2 border-dashed ${darkMode ? 'border-gray-600' : 'border-gray-200'} rounded-xl flex items-center justify-center gap-2 text-sm ${textMuted} font-medium mt-2 transition-colors`}>
           <Plus className="w-4 h-4" /> Ajouter un document
         </button>
       </div>

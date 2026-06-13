@@ -20,10 +20,15 @@ const typeConfig: Record<string, { icon: typeof Bell; color: string; bg: string 
 }
 
 export default function NotificationsScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
+
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] pb-20">
+    <div className={`min-h-screen ${bg} pb-20 transition-colors`}>
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('dashboard')} className="text-white">
@@ -38,20 +43,20 @@ export default function NotificationsScreen() {
           const config = typeConfig[notif.type] || typeConfig.info
           const Icon = config.icon
           return (
-            <div key={notif.id} className={`bg-white rounded-xl p-4 shadow-sm ${!notif.read ? 'border-l-4 border-[#1E5EFF]' : ''}`}>
+            <div key={notif.id} className={`${cardBg} rounded-xl p-4 shadow-sm ${!notif.read ? 'border-l-4 border-[#1E5EFF]' : ''} transition-colors`}>
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: config.bg }}>
                   <Icon className="w-4 h-4" style={{ color: config.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm ${!notif.read ? 'font-semibold text-[#0B2D6B]' : 'font-medium text-gray-600'}`}>
+                    <p className={`text-sm ${!notif.read ? `font-semibold ${textPrimary}` : `font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}`}>
                       {notif.title}
                     </p>
                     {!notif.read && <span className="w-2 h-2 rounded-full bg-[#1E5EFF] flex-shrink-0 mt-1.5" />}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{notif.body}</p>
-                  <p className="text-[10px] text-gray-300 mt-1">{notif.time}</p>
+                  <p className={`text-xs ${textMuted} mt-0.5`}>{notif.body}</p>
+                  <p className={`text-[10px] ${darkMode ? 'text-gray-600' : 'text-gray-300'} mt-1`}>{notif.time}</p>
                 </div>
               </div>
             </div>

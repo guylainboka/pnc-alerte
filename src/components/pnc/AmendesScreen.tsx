@@ -17,19 +17,24 @@ const paymentMethods = [
 ]
 
 export default function AmendesScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
   const [selectedFine, setSelectedFine] = useState<string | null>(null)
   const [paymentStep, setPaymentStep] = useState(0) // 0: list, 1: method, 2: processing, 3: success
   const [selectedMethod, setSelectedMethod] = useState('')
 
+  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
+
   if (paymentStep === 3) {
     return (
-      <div className="min-h-screen bg-[#F5F6FA] flex flex-col items-center justify-center px-6">
+      <div className={`min-h-screen ${bg} flex flex-col items-center justify-center px-6 transition-colors`}>
         <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
           <Check className="w-10 h-10 text-green-600" />
         </div>
-        <h2 className="text-lg font-bold text-[#0B2D6B] mb-2">Paiement réussi !</h2>
-        <p className="text-sm text-gray-500 text-center mb-6">Votre reçu PDF est disponible dans l&apos;historique des paiements.</p>
+        <h2 className={`text-lg font-bold ${textPrimary} mb-2`}>Paiement réussi !</h2>
+        <p className={`text-sm ${textMuted} text-center mb-6`}>Votre reçu PDF est disponible dans l&apos;historique des paiements.</p>
         <button onClick={() => { setPaymentStep(0); setSelectedFine(null) }} className="px-8 py-3 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm">
           Retour
         </button>
@@ -38,7 +43,7 @@ export default function AmendesScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] pb-20">
+    <div className={`min-h-screen ${bg} pb-20 transition-colors`}>
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('dashboard')} className="text-white">
@@ -51,16 +56,16 @@ export default function AmendesScreen() {
       <div className="px-6 pt-4 space-y-3">
         {paymentStep === 0 && (
           <>
-            <h3 className="text-sm font-bold text-[#0B2D6B]">Vos amendes</h3>
+            <h3 className={`text-sm font-bold ${textPrimary}`}>Vos amendes</h3>
             {fines.map((fine) => (
-              <div key={fine.id} className={`bg-white rounded-xl p-4 shadow-sm ${selectedFine === fine.id ? 'ring-2 ring-[#1E5EFF]' : ''}`}>
+              <div key={fine.id} className={`${cardBg} rounded-xl p-4 shadow-sm ${selectedFine === fine.id ? 'ring-2 ring-[#1E5EFF]' : ''} transition-colors`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-[#0B2D6B]">{fine.type}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Réf : {fine.reference} — {fine.date}</p>
+                    <p className={`text-sm font-medium ${textPrimary}`}>{fine.type}</p>
+                    <p className={`text-xs ${textMuted} mt-0.5`}>Réf : {fine.reference} — {fine.date}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-[#0B2D6B]">{fine.amount}</p>
+                    <p className={`text-sm font-bold ${textPrimary}`}>{fine.amount}</p>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                       fine.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-[#FF3B30]/10 text-[#FF3B30]'
                     }`}>
@@ -86,17 +91,17 @@ export default function AmendesScreen() {
 
         {paymentStep === 1 && (
           <>
-            <h3 className="text-sm font-bold text-[#0B2D6B]">Mode de paiement</h3>
+            <h3 className={`text-sm font-bold ${textPrimary}`}>Mode de paiement</h3>
             {paymentMethods.map(({ id, label, icon: Icon, color }) => (
               <button
                 key={id}
                 onClick={() => setSelectedMethod(id)}
-                className={`w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 text-left transition-all ${selectedMethod === id ? 'ring-2 ring-[#1E5EFF]' : ''}`}
+                className={`w-full ${cardBg} rounded-xl p-4 shadow-sm flex items-center gap-3 text-left transition-all ${selectedMethod === id ? 'ring-2 ring-[#1E5EFF]' : ''}`}
               >
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}15` }}>
                   <Icon className="w-5 h-5" style={{ color }} />
                 </div>
-                <span className="text-sm font-medium text-[#0B2D6B]">{label}</span>
+                <span className={`text-sm font-medium ${textPrimary}`}>{label}</span>
               </button>
             ))}
             <button
@@ -112,7 +117,7 @@ export default function AmendesScreen() {
         {paymentStep === 2 && (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-12 h-12 border-4 border-[#1E5EFF]/30 border-t-[#1E5EFF] rounded-full animate-spin mb-4" />
-            <p className="text-sm text-[#0B2D6B] font-medium">Traitement en cours...</p>
+            <p className={`text-sm ${textPrimary} font-medium`}>Traitement en cours...</p>
           </div>
         )}
       </div>
