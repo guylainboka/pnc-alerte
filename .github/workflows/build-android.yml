@@ -3,7 +3,10 @@ name: Build Android APK
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -13,12 +16,12 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js
+      - name: 📦 Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      - name: 📦 Setup Java JDK
+      - name: 📦 Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -27,26 +30,24 @@ jobs:
       - name: 📦 Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install Bun
         run: |
-          npm install -g bun
-          bun install
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: 📦 Install dependencies
+        run: bun install
 
       - name: 🗑️ Remove API routes for static export
         run: rm -rf src/app/api
 
       - name: 🏗️ Build Next.js (static export)
-        run: CAPACITOR_BUILD=true npx next build
+        run: CAPACITOR_BUILD=true bunx next build
         env:
           DATABASE_URL: file:./dev.db
 
       - name: 📱 Sync Capacitor
-        run: npx cap sync android
-
-      - name: ♻️ Restore API routes
-        run: |
-          mkdir -p src/app/api/chat
-          # Restore will happen from git on next checkout
+        run: bunx cap sync android
 
       - name: 🔨 Build Android APK (Debug)
         working-directory: android
