@@ -23,13 +23,20 @@ import CoffreFortScreen from '@/components/pnc/CoffreFortScreen'
 import AmendesScreen from '@/components/pnc/AmendesScreen'
 import NotificationsScreen from '@/components/pnc/NotificationsScreen'
 import ProfilScreen from '@/components/pnc/ProfilScreen'
+import ProfilEditScreen from '@/components/pnc/ProfilEditScreen'
+import SettingsScreen from '@/components/pnc/SettingsScreen'
+import SettingsNotificationsScreen from '@/components/pnc/SettingsNotificationsScreen'
+import SettingsSecurityScreen from '@/components/pnc/SettingsSecurityScreen'
+import SettingsLanguageScreen from '@/components/pnc/SettingsLanguageScreen'
+import SettingsGeolocationScreen from '@/components/pnc/SettingsGeolocationScreen'
+import SettingsOfflineScreen from '@/components/pnc/SettingsOfflineScreen'
 import AlerteDetailScreen from '@/components/pnc/AlerteDetailScreen'
 import BottomNav from '@/components/pnc/BottomNav'
 
 const screensWithNav = ['dashboard', 'alertes', 'sos', 'assistant', 'profil']
 
 export default function Home() {
-  const { currentScreen } = useAppStore()
+  const { currentScreen, darkMode } = useAppStore()
 
   const screenMap: Record<string, React.ReactNode> = {
     splash: <SplashScreen />,
@@ -55,13 +62,20 @@ export default function Home() {
     amendes: <AmendesScreen />,
     notifications: <NotificationsScreen />,
     profil: <ProfilScreen />,
+    'profil-edit': <ProfilEditScreen />,
+    settings: <SettingsScreen />,
+    'settings-notifications': <SettingsNotificationsScreen />,
+    'settings-security': <SettingsSecurityScreen />,
+    'settings-language': <SettingsLanguageScreen />,
+    'settings-geolocation': <SettingsGeolocationScreen />,
+    'settings-offline': <SettingsOfflineScreen />,
     'alerte-detail': <AlerteDetailScreen />,
   }
 
   const showNav = screensWithNav.includes(currentScreen)
 
   return (
-    <main className="min-h-screen">
+    <main className={`min-h-screen transition-colors ${darkMode ? 'dark bg-[#0a1a3a]' : 'bg-white'}`}>
       {screenMap[currentScreen] || <DashboardScreen />}
       {showNav && <BottomNav />}
     </main>
