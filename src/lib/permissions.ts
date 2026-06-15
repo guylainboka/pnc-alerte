@@ -1,11 +1,7 @@
 // Gestionnaire de permissions Android pour PNC Alerte
-// Demande les permissions natives AVANT d'utiliser les fonctionnalités
+// Utilise des imports dynamiques pour éviter les erreurs SSR
 
 import { isNative } from './capacitor'
-import { Geolocation } from '@capacitor/geolocation'
-import { Camera } from '@capacitor/camera'
-import { LocalNotifications } from '@capacitor/local-notifications'
-import { Filesystem } from '@capacitor/filesystem'
 
 export type PermissionType = 'camera' | 'location' | 'notifications' | 'storage' | 'microphone'
 
@@ -18,13 +14,13 @@ interface PermissionStatus {
 // Demander une permission spécifique
 export async function requestPermission(type: PermissionType): Promise<PermissionStatus> {
   if (!isNative()) {
-    // Sur web, les permissions sont gérées par le navigateur
     return { granted: true, denied: false, prompt: false }
   }
 
   try {
     switch (type) {
       case 'camera': {
+        const { Camera } = await import('@capacitor/camera')
         const result = await Camera.requestPermissions()
         const state = result.camera || result.photos || 'granted'
         return {
@@ -35,6 +31,7 @@ export async function requestPermission(type: PermissionType): Promise<Permissio
       }
 
       case 'location': {
+        const { Geolocation } = await import('@capacitor/geolocation')
         const result = await Geolocation.requestPermissions()
         const state = result.location || result.coarseLocation || 'granted'
         return {
@@ -45,6 +42,7 @@ export async function requestPermission(type: PermissionType): Promise<Permissio
       }
 
       case 'notifications': {
+        const { LocalNotifications } = await import('@capacitor/local-notifications')
         const result = await LocalNotifications.requestPermissions()
         const state = result.display || 'granted'
         return {
@@ -55,12 +53,10 @@ export async function requestPermission(type: PermissionType): Promise<Permissio
       }
 
       case 'storage': {
-        // Sur Android 13+, pas besoin de permission explicite pour le stockage
         return { granted: true, denied: false, prompt: false }
       }
 
       case 'microphone': {
-        // Le microphone est demandé via l'API Web Speech
         return { granted: true, denied: false, prompt: false }
       }
 
@@ -82,6 +78,7 @@ export async function checkPermission(type: PermissionType): Promise<PermissionS
   try {
     switch (type) {
       case 'camera': {
+        const { Camera } = await import('@capacitor/camera')
         const result = await Camera.checkPermissions()
         const state = result.camera || result.photos || 'granted'
         return {
@@ -92,6 +89,7 @@ export async function checkPermission(type: PermissionType): Promise<PermissionS
       }
 
       case 'location': {
+        const { Geolocation } = await import('@capacitor/geolocation')
         const result = await Geolocation.checkPermissions()
         const state = result.location || result.coarseLocation || 'granted'
         return {
@@ -102,6 +100,7 @@ export async function checkPermission(type: PermissionType): Promise<PermissionS
       }
 
       case 'notifications': {
+        const { LocalNotifications } = await import('@capacitor/local-notifications')
         const result = await LocalNotifications.checkPermissions()
         const state = result.display || 'granted'
         return {
@@ -123,7 +122,6 @@ export async function checkPermission(type: PermissionType): Promise<PermissionS
 export async function requestAllPermissions(): Promise<Record<PermissionType, boolean>> {
   const results: Record<string, boolean> = {}
 
-  // Demander les permissions une par une pour une meilleure UX
   const locationPerm = await requestPermission('location')
   results.location = locationPerm.granted
 
