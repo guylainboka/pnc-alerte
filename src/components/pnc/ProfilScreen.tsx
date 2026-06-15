@@ -5,23 +5,37 @@ import {
   ChevronLeft, Camera, User, Phone, Mail, MapPin,
   Edit3, Settings, Bell, Lock, Globe, MapPin as GeoIcon,
   Award, Moon, Sun, LogOut, ChevronRight, ShieldCheck,
-  Wifi, WifiOff, Volume2, FileText, Vault, Wallet, HelpCircle, Info
+  WifiOff, Volume2, FileText, Vault, Wallet, HelpCircle, Info, ImagePlus
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import { nativeCamera } from '@/lib/native-services'
+import { requestPermission } from '@/lib/permissions'
 
 export default function ProfilScreen() {
   const { navigate, logout, userName, userEmail, userPhone, darkMode, toggleDarkMode, profileImage, setProfileImage, userProvince, userCommune } = useAppStore()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [showImageModal, setShowImageModal] = useState(false)
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        setProfileImage(ev.target?.result as string)
+  // === UPLOAD PHOTO DE PROFIL NATIF ANDROID ===
+  const takeProfilePhoto = async () => {
+    try {
+      const perm = await requestPermission('camera')
+      if (!perm.granted) {
+        alert('Permission caméra refusée. Activez-la dans les paramètres Android.')
+        return
       }
-      reader.readAsDataURL(file)
+      const photo = await nativeCamera.takePhoto('medium')
+      setProfileImage(photo)
+    } catch (err) {
+      console.error('Erreur caméra profil:', err)
+    }
+  }
+
+  const pickProfileImage = async () => {
+    try {
+      const image = await nativeCamera.pickImage()
+      setProfileImage(image)
+    } catch (err) {
+      console.error('Erreur galerie profil:', err)
     }
   }
 
@@ -71,7 +85,7 @@ export default function ProfilScreen() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-white text-lg font-bold">Mon Profil</h1>
             <button onClick={() => navigate('settings')}
-              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+              className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-transform">
               <Settings className="w-5 h-5 text-white" />
             </button>
           </div>
@@ -89,11 +103,10 @@ export default function ProfilScreen() {
                 )}
               </div>
               <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#1E5EFF] rounded-lg flex items-center justify-center shadow-lg border-2 border-[#0B2D6B]">
+                onClick={() => setShowImageModal(true)}
+                className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#1E5EFF] rounded-lg flex items-center justify-center shadow-lg border-2 border-[#0B2D6B] active:scale-90 transition-transform">
                 <Camera className="w-3.5 h-3.5 text-white" />
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             </div>
             <div className="flex-1">
               <h2 className="text-white text-lg font-bold">{userName || 'Citoyen'}</h2>
@@ -110,6 +123,58 @@ export default function ProfilScreen() {
           </div>
         </div>
       </div>
+
+      {/* === MODAL CHOIX PHOTO NATIVE ANDROID === */}
+      {showImageModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowImageModal(false)}>
+          <div className={`${cardBg} w-full rounded-t-2xl p-6 pb-8`} onClick={e => e.stopPropagation()}>
+            <h3 className={`text-base font-bold ${textPrimary} mb-4`}>Photo de profil</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => { takeProfilePhoto(); setShowImageModal(false) }}
+                className={`w-full ${cardBg} border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#1E5EFF]/10 flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-[#1E5EFF]" />
+                </div>
+                <div className="text-left">
+                  <span className={`text-sm font-medium ${textPrimary} block`}>Prendre une photo</span>
+                  <span className={`text-[10px] ${textMuted}`}>Ouvrir la caméra Android</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { pickProfileImage(); setShowImageModal(false) }}
+                className={`w-full ${cardBg} border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#0B9D5A]/10 flex items-center justify-center">
+                  <ImagePlus className="w-5 h-5 text-[#0B9D5A]" />
+                </div>
+                <div className="text-left">
+                  <span className={`text-sm font-medium ${textPrimary} block`}>Choisir de la galerie</span>
+                  <span className={`text-[10px] ${textMuted}`}>Sélectionner une image existante</span>
+                </div>
+              </button>
+              {profileImage && (
+                <button
+                  onClick={() => { setProfileImage(null); setShowImageModal(false) }}
+                  className="w-full border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3 active:scale-[0.98] transition-transform"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                    <User className="w-5 h-5 text-red-500" />
+                  </div>
+                  <span className="text-sm font-medium text-red-500">Supprimer la photo</span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowImageModal(false)}
+                className="w-full py-3 text-center text-sm text-gray-500 font-medium"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info card */}
       <div className="px-6 -mt-8 mb-4 relative z-20">

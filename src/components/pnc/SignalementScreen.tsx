@@ -1,8 +1,10 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { ChevronLeft, Camera, Mic, MicOff, MapPin, EyeOff, Image, X, Share2 } from 'lucide-react'
+import { ChevronLeft, Camera, Mic, MicOff, MapPin, EyeOff, Image as ImageIcon, X, Share2 } from 'lucide-react'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { nativeCamera, nativeGeolocation, nativeShare } from '@/lib/native-services'
+import { requestPermission } from '@/lib/permissions'
 
 const categories = [
   { id: 'vol', label: 'Vol', emoji: '💰' },
@@ -16,7 +18,7 @@ const categories = [
 ]
 
 export default function SignalementScreen() {
-  const { navigate, darkMode, userLatitude, userLongitude, setLocation, addUserAlert } = useAppStore()
+  const { navigate, darkMode, userLatitude, userLongitude, setLocation, addUserAlert, goBack } = useAppStore()
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
@@ -26,52 +28,52 @@ export default function SignalementScreen() {
   const [locating, setLocating] = useState(false)
   const [submittedRef, setSubmittedRef] = useState('')
 
-  const cameraInputRef = useRef<HTMLInputElement>(null)
-  const galleryInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
 
-  const getUserLocation = useCallback(() => {
-    if (!navigator.geolocation) return
+  // === GÉOLOCALISATION RÉELLE ANDROID ===
+  const getUserLocation = useCallback(async () => {
     setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation(pos.coords.latitude, pos.coords.longitude)
-        setLocating(false)
-      },
-      () => setLocating(false),
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
+    try {
+      await requestPermission('location')
+      const pos = await nativeGeolocation.getCurrentPosition()
+      setLocation(pos.coords.latitude, pos.coords.longitude)
+    } catch (err) {
+      console.error('Erreur géolocalisation:', err)
+    }
+    setLocating(false)
   }, [setLocation])
 
   useEffect(() => {
     if (!userLatitude) getUserLocation()
   }, [userLatitude, getUserLocation])
 
-  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        setAttachments((prev) => [...prev, ev.target?.result as string])
+  // === CAMÉRA NATIVE ANDROID ===
+  const takePhoto = async () => {
+    try {
+      const perm = await requestPermission('camera')
+      if (!perm.granted) {
+        alert('Permission caméra refusée. Activez-la dans les paramètres Android.')
+        return
       }
-      reader.readAsDataURL(file)
+      const photo = await nativeCamera.takePhoto('medium')
+      setAttachments((prev) => [...prev, photo])
+    } catch (err) {
+      console.error('Erreur caméra:', err)
     }
   }
 
-  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-          setAttachments((prev) => [...prev, ev.target?.result as string])
-        }
-        reader.readAsDataURL(file)
-      })
+  // === GALERIE NATIVE ANDROID ===
+  const pickFromGallery = async () => {
+    try {
+      const image = await nativeCamera.pickImage()
+      setAttachments((prev) => [...prev, image])
+    } catch (err) {
+      console.error('Erreur galerie:', err)
     }
   }
 
+  // === ENREGISTREMENT VOCAL ===
   const handleVoiceRecord = async () => {
     if (isRecording && mediaRecorderRef.current) {
       mediaRecorderRef.current.stop()
@@ -110,14 +112,16 @@ export default function SignalementScreen() {
     setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
 
+  // === PARTAGE NATIF ANDROID ===
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Signalement PNC Alerte',
-          text: `Signalement: ${category}\n${description}`,
-        })
-      } catch {}
+    try {
+      await nativeShare.share({
+        title: 'Signalement PNC Alerte',
+        text: `Signalement: ${categories.find(c => c.id === category)?.label}\n${description}\n\nEnvoyé via PNC Alerte`,
+        dialogTitle: 'Partager le signalement',
+      })
+    } catch {
+      // Partage annulé
     }
   }
 
@@ -162,10 +166,10 @@ export default function SignalementScreen() {
           Votre signalement a été transmis au centre opérationnel de la PNC.
         </p>
         <div className="flex gap-3 w-full">
-          <button onClick={() => navigate('mes-alertes')} className="flex-1 py-3 bg-[#0B9D5A] text-white rounded-xl font-semibold text-sm">
+          <button onClick={() => navigate('mes-alertes')} className="flex-1 py-3 bg-[#0B9D5A] text-white rounded-xl font-semibold text-sm active:scale-95 transition-transform">
             Voir le suivi
           </button>
-          <button onClick={() => navigate('dashboard')} className="flex-1 py-3 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm">
+          <button onClick={() => navigate('dashboard')} className="flex-1 py-3 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-95 transition-transform">
             Accueil
           </button>
         </div>
@@ -178,7 +182,7 @@ export default function SignalementScreen() {
       {/* Header */}
       <div className="bg-[#0B2D6B] pt-12 pb-5 px-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('dashboard')} className="text-white">
+          <button onClick={goBack} className="text-white active:scale-90 transition-transform">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <h1 className="text-white text-lg font-bold">Signalement d&apos;incident</h1>
@@ -195,10 +199,8 @@ export default function SignalementScreen() {
               <p className={`text-[10px] ${textMuted}`}>Masquer votre identité</p>
             </div>
           </div>
-          <button
-            onClick={() => setAnonymous(!anonymous)}
-            className={`w-11 h-6 rounded-full transition-colors ${anonymous ? 'bg-[#8B5CF6]' : 'bg-gray-200'} relative`}
-          >
+          <button onClick={() => setAnonymous(!anonymous)}
+            className={`w-11 h-6 rounded-full transition-colors ${anonymous ? 'bg-[#8B5CF6]' : 'bg-gray-200'} relative`}>
             <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow-sm ${anonymous ? 'right-0.5' : 'left-0.5'}`} />
           </button>
         </div>
@@ -214,15 +216,12 @@ export default function SignalementScreen() {
           <h3 className={`text-sm font-bold ${textPrimary} mb-3`}>Catégorie d&apos;incident</h3>
           <div className="grid grid-cols-2 gap-2">
             {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setCategory(cat.id)}
-                className={`p-3 rounded-xl text-left flex items-center gap-2 transition-all ${
+              <button key={cat.id} onClick={() => setCategory(cat.id)}
+                className={`p-3 rounded-xl text-left flex items-center gap-2 transition-all active:scale-95 ${
                   category === cat.id
                     ? 'bg-[#1E5EFF] text-white shadow-md shadow-blue-500/20'
                     : `${cardBg} ${textPrimary} shadow-sm`
-                }`}
-              >
+                }`}>
                 <span className="text-lg">{cat.emoji}</span>
                 <span className="text-xs font-medium">{cat.label}</span>
               </button>
@@ -233,25 +232,18 @@ export default function SignalementScreen() {
         {/* Description with voice dictation */}
         <div>
           <h3 className={`text-sm font-bold ${textPrimary} mb-2`}>Description</h3>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Décrivez l'incident en détail..."
-            rows={4}
-            className={`w-full px-4 py-3 ${cardBg} rounded-xl text-sm border border-gray-100 dark:border-gray-700 focus:border-[#1E5EFF] outline-none transition-all resize-none shadow-sm ${darkMode ? 'text-white' : ''}`}
-          />
-          <button
-            onClick={handleVoiceRecord}
-            className={`flex items-center gap-1.5 text-xs font-medium mt-2 px-3 py-1.5 rounded-lg transition-all ${
-              isRecording ? 'bg-[#FF3B30]/10 text-[#FF3B30]' : 'text-[#1E5EFF] bg-[#1E5EFF]/5'
-            }`}
-          >
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+            placeholder="Décrivez l'incident en détail..." rows={4}
+            className={`w-full px-4 py-3 ${cardBg} rounded-xl text-sm border border-gray-100 dark:border-gray-700 focus:border-[#1E5EFF] outline-none transition-all resize-none shadow-sm ${darkMode ? 'text-white' : ''}`} />
+          <button onClick={handleVoiceRecord}
+            className={`flex items-center gap-1.5 text-xs font-medium mt-2 px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
+              isRecording ? 'bg-[#FF3B30]/10 text-[#FF3B30]' : 'text-[#1E5EFF] bg-[#1E5EFF]/5'}`}>
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             {isRecording ? 'Arrêter l\'enregistrement...' : 'Dicter avec la voix'}
           </button>
         </div>
 
-        {/* Location */}
+        {/* Location - GPS ANDROID RÉEL */}
         <div className={`${cardBg} rounded-xl p-4 shadow-sm transition-colors`}>
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-[#1E5EFF]" />
@@ -263,17 +255,16 @@ export default function SignalementScreen() {
                   : 'Acquisition de la position...'}
               </p>
             </div>
-            <button onClick={getUserLocation} disabled={locating} className="text-[10px] text-[#1E5EFF] font-medium">
+            <button onClick={getUserLocation} disabled={locating} className="text-[10px] text-[#1E5EFF] font-medium active:scale-95 transition-transform">
               {locating ? '...' : 'Rafraîchir'}
             </button>
           </div>
         </div>
 
-        {/* Attachments */}
+        {/* Pièces jointes - UPLOADS NATIFS ANDROID */}
         <div>
           <h3 className={`text-sm font-bold ${textPrimary} mb-2`}>Pièces jointes</h3>
 
-          {/* Preview attachments */}
           {attachments.length > 0 && (
             <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
               {attachments.map((att, idx) => (
@@ -287,10 +278,8 @@ export default function SignalementScreen() {
                       <img src={att} alt="" className="w-full h-full object-cover" />
                     )}
                   </div>
-                  <button
-                    onClick={() => removeAttachment(idx)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#FF3B30] rounded-full flex items-center justify-center"
-                  >
+                  <button onClick={() => removeAttachment(idx)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#FF3B30] rounded-full flex items-center justify-center active:scale-90 transition-transform">
                     <X className="w-3 h-3 text-white" />
                   </button>
                 </div>
@@ -298,29 +287,21 @@ export default function SignalementScreen() {
             </div>
           )}
 
+          {/* Boutons natifs Android */}
           <div className="flex gap-3">
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
-            <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple onChange={handleGallerySelect} className="hidden" />
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform`}
-            >
+            <button onClick={takePhoto}
+              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform`}>
               <Camera className="w-6 h-6 text-[#1E5EFF]" />
               <span className={`text-[9px] ${textMuted}`}>Caméra</span>
             </button>
-            <button
-              onClick={() => galleryInputRef.current?.click()}
-              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform`}
-            >
-              <Image className="w-6 h-6 text-[#0B9D5A]" />
+            <button onClick={pickFromGallery}
+              className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform`}>
+              <ImageIcon className="w-6 h-6 text-[#0B9D5A]" />
               <span className={`text-[9px] ${textMuted}`}>Galerie</span>
             </button>
-            <button
-              onClick={handleVoiceRecord}
+            <button onClick={handleVoiceRecord}
               className={`w-20 h-20 ${cardBg} rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 transition-transform ${
-                isRecording ? 'border-[#FF3B30]' : 'border-gray-200 dark:border-gray-700'
-              }`}
-            >
+                isRecording ? 'border-[#FF3B30]' : 'border-gray-200 dark:border-gray-700'}`}>
               {isRecording ? <MicOff className="w-6 h-6 text-[#FF3B30]" /> : <Mic className="w-6 h-6 text-[#8B5CF6]" />}
               <span className={`text-[9px] ${textMuted}`}>{isRecording ? 'Stop' : 'Audio'}</span>
             </button>
@@ -328,23 +309,18 @@ export default function SignalementScreen() {
           <p className={`text-[10px] ${textMuted} mt-1`}>Maximum 50 MB par signalement</p>
         </div>
 
-        {/* Share button */}
+        {/* Partage natif Android */}
         {category && description && (
-          <button
-            onClick={handleShare}
-            className={`w-full ${cardBg} rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform`}
-          >
+          <button onClick={handleShare}
+            className={`w-full ${cardBg} rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform`}>
             <Share2 className="w-4 h-4 text-[#1E5EFF]" />
             <span className={`text-sm font-medium ${textPrimary}`}>Partager le signalement</span>
           </button>
         )}
 
         {/* Submit */}
-        <button
-          onClick={handleSubmit}
-          disabled={!category || !description}
-          className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-40 disabled:shadow-none"
-        >
+        <button onClick={handleSubmit} disabled={!category || !description}
+          className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-40 disabled:shadow-none">
           Soumettre le signalement
         </button>
       </div>
