@@ -2,7 +2,30 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Simple password hash for demo (in production use bcrypt)
+function hashPassword(password: string): string {
+  return `hash_${Buffer.from(password).toString('base64')}`;
+}
+
 async function main() {
+  // Clean all existing data first
+  console.log('Cleaning existing data...');
+  await prisma.serviceLog.deleteMany();
+  await prisma.externalService.deleteMany();
+  await prisma.complaint.deleteMany();
+  await prisma.evidence.deleteMany();
+  await prisma.caseCriminal.deleteMany();
+  await prisma.case.deleteMany();
+  await prisma.criminal.deleteMany();
+  await prisma.citizen.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.officer.deleteMany();
+  await prisma.commissariat.deleteMany();
+  await prisma.sousDistrict.deleteMany();
+  await prisma.district.deleteMany();
+  await prisma.province.deleteMany();
+  console.log('Data cleaned. Starting seed...');
+
   // Provinces
   const kinshasa = await prisma.province.create({ data: { name: 'Kinshasa', code: 'KIN' } });
   const katanga = await prisma.province.create({ data: { name: 'Haut-Katanga', code: 'HKAT' } });
@@ -39,13 +62,136 @@ async function main() {
   const officer5 = await prisma.officer.create({ data: { matricule: 'PNC-005', firstName: 'Félix', lastName: 'Kasongo', rank: 'Agent', phone: '+243811000005', email: 'f.kasongo@pnc.cd', commissariatId: comNdjili.id } });
   const officer6 = await prisma.officer.create({ data: { matricule: 'PNC-006', firstName: 'Clarisse', lastName: 'Mbuyi', rank: 'Commissaire', phone: '+243811000006', email: 'c.mbuyi@pnc.cd', commissariatId: comLubumbashi.id } });
 
-  // Criminals
-  const criminal1 = await prisma.criminal.create({ data: { reference: 'CRIM-2024-001', firstName: 'Alain', lastName: 'Mbala', alias: 'Le Boss', dateOfBirth: new Date('1985-03-15'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-8547291', physicalDesc: '1m78, cicatrice sur la joue gauche', status: 'recherche', dangerLevel: 'eleve', lastKnownAddr: 'Quartier Matonge, Kinshasa' } });
-  const criminal2 = await prisma.criminal.create({ data: { reference: 'CRIM-2024-002', firstName: 'Serge', lastName: 'Ilunga', alias: 'Serge 9 vie', dateOfBirth: new Date('1990-07-22'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-9083421', physicalDesc: '1m72, tatouage bras droit', status: 'incarcere', dangerLevel: 'eleve', lastKnownAddr: 'Ndjili, Kinshasa' } });
-  const criminal3 = await prisma.criminal.create({ data: { reference: 'CRIM-2024-003', firstName: 'Nadia', lastName: 'Kalonji', alias: null, dateOfBirth: new Date('1995-11-08'), gender: 'F', nationality: 'Congolaise', idNumber: 'ID-9526173', physicalDesc: '1m65, grain de beauté sur la tempe droite', status: 'libre', dangerLevel: 'faible', lastKnownAddr: 'Gombe, Kinshasa' } });
-  const criminal4 = await prisma.criminal.create({ data: { reference: 'CRIM-2024-004', firstName: 'Hervé', lastName: 'Nkulu', alias: 'Hervé Cash', dateOfBirth: new Date('1988-01-30'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-8839102', physicalDesc: '1m80, barbe fine', status: 'sous_surveillance', dangerLevel: 'moyen', lastKnownAddr: 'Lubumbashi, Haut-Katanga' } });
-  const criminal5 = await prisma.criminal.create({ data: { reference: 'CRIM-2024-005', firstName: 'Pascal', lastName: 'Mwamba', alias: 'Paco', dateOfBirth: new Date('1992-05-14'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-9251480', physicalDesc: '1m75, lunettes, cheveux rasés', status: 'recherche', dangerLevel: 'moyen', lastKnownAddr: 'Goma, Nord-Kivu' } });
-  const criminal6 = await prisma.criminal.create({ data: { reference: 'CRIM-2024-006', firstName: 'Chantal', lastName: 'Banza', alias: 'Maman Chantal', dateOfBirth: new Date('1978-09-20'), gender: 'F', nationality: 'Congolaise', idNumber: 'ID-7865234', physicalDesc: '1m60, taille forte', status: 'incarcere', dangerLevel: 'eleve', lastKnownAddr: 'Barumbu, Kinshasa' } });
+  // === Utilisateurs du système (avec auth) ===
+  await prisma.user.create({ data: { username: 'admin', email: 'admin@pnc.cd', passwordHash: hashPassword('admin123'), firstName: 'Jean', lastName: 'Mukendi', role: 'admin', phone: '+243811000001', officerId: officer1.id, isActive: true } });
+  await prisma.user.create({ data: { username: 'mtshisekedi', email: 'm.tshisekedi@pnc.cd', passwordHash: hashPassword('police123'), firstName: 'Marie', lastName: 'Tshisekedi', role: 'inspecteur', phone: '+243811000002', officerId: officer2.id, isActive: true } });
+  await prisma.user.create({ data: { username: 'plumumba', email: 'p.lumumba@pnc.cd', passwordHash: hashPassword('police123'), firstName: 'Patrick', lastName: 'Lumumba', role: 'agent', phone: '+243811000003', officerId: officer3.id, isActive: true } });
+  await prisma.user.create({ data: { username: 'gkabila', email: 'g.kabila@pnc.cd', passwordHash: hashPassword('police123'), firstName: 'Grace', lastName: 'Kabila', role: 'inspecteur', phone: '+243811000004', officerId: officer4.id, isActive: true } });
+  await prisma.user.create({ data: { username: 'fkasongo', email: 'f.kasongo@pnc.cd', passwordHash: hashPassword('police123'), firstName: 'Félix', lastName: 'Kasongo', role: 'agent', phone: '+243811000005', officerId: officer5.id, isActive: false } });
+  await prisma.user.create({ data: { username: 'cmbuyi', email: 'c.mbuyi@pnc.cd', passwordHash: hashPassword('police123'), firstName: 'Clarisse', lastName: 'Mbuyi', role: 'commissaire', phone: '+243811000006', officerId: officer6.id, isActive: true } });
+
+  // === Citoyens inscrits via l'application mobile ===
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-001', firstName: 'Tresor', lastName: 'Mbeki', phone: '+243820000001', email: 't.mbeki@email.cd', gender: 'M', dateOfBirth: new Date('1990-05-12'), address: '45 Avenue du Port', city: 'Kinshasa', commune: 'Gombe', latitude: -4.325, longitude: 15.313, lastLocation: 'Avenue du Port, Gombe', lastLocationAt: new Date(Date.now() - 15 * 60000), status: 'actif', verified: true, totalAlerts: 3, totalComplaints: 1, commissariatId: comGombe.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-002', firstName: 'Claudine', lastName: 'Ngoie', phone: '+243820000002', email: 'c.ngoie@email.cd', gender: 'F', dateOfBirth: new Date('1985-08-23'), address: '12 Rue Kasa-Vubu', city: 'Kinshasa', commune: 'Barumbu', latitude: -4.331, longitude: 15.313, lastLocation: 'Marché Barumbu', lastLocationAt: new Date(Date.now() - 30 * 60000), status: 'actif', verified: true, totalAlerts: 2, totalComplaints: 0, commissariatId: comBarumbu.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-003', firstName: 'Jacques', lastName: 'Mutombo', phone: '+243820000003', email: 'j.mutombo@email.cd', gender: 'M', dateOfBirth: new Date('1992-03-15'), address: '78 Boulevard 30 Juin', city: 'Kinshasa', commune: 'Kalamu', latitude: -4.328, longitude: 15.309, lastLocation: 'Boulevard 30 Juin', lastLocationAt: new Date(Date.now() - 2 * 3600000), status: 'actif', verified: true, totalAlerts: 1, totalComplaints: 2, commissariatId: comKalamu.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-004', firstName: 'Emmanuel', lastName: 'Lunda', phone: '+243820000004', email: 'e.lunda@email.cd', gender: 'M', dateOfBirth: new Date('1988-11-07'), address: '34 Avenue Industrielle', city: 'Kinshasa', commune: 'Ndjili', latitude: -4.385, longitude: 15.360, lastLocation: 'Zone Industrielle, Ndjili', lastLocationAt: new Date(Date.now() - 8 * 60000), status: 'actif', verified: false, totalAlerts: 1, totalComplaints: 0, commissariatId: comNdjili.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-005', firstName: 'Aimée', lastName: 'Kabuo', phone: '+243820000005', email: 'a.kabuo@email.cd', gender: 'F', dateOfBirth: new Date('1995-07-19'), address: '23 Rue de la Paix', city: 'Goma', commune: 'Karisimbi', latitude: -1.658, longitude: 29.223, lastLocation: 'Carrefour Goma', lastLocationAt: new Date(Date.now() - 45 * 60000), status: 'actif', verified: true, totalAlerts: 1, totalComplaints: 1, commissariatId: comGoma.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-006', firstName: 'Albert', lastName: 'Kabongo', phone: '+243830000001', email: 'a.kabongo@email.cd', gender: 'M', dateOfBirth: new Date('1980-04-30'), address: '45 Avenue Mongala', city: 'Kinshasa', commune: 'Gombe', latitude: -4.320, longitude: 15.315, lastLocation: 'Avenue Mongala, Gombe', lastLocationAt: new Date(Date.now() - 5 * 60000), status: 'actif', verified: true, totalAlerts: 0, totalComplaints: 1, commissariatId: comGombe.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-007', firstName: 'Serge', lastName: 'Bokanga', phone: '+243830000002', gender: 'M', dateOfBirth: new Date('1993-09-14'), address: '12 Rue Kasa-Vubu', city: 'Kinshasa', commune: 'Barumbu', latitude: -4.330, longitude: 15.312, lastLocation: 'Marché Barumbu', lastLocationAt: new Date(Date.now() - 60 * 60000), status: 'suspendu', verified: false, totalAlerts: 0, totalComplaints: 1, commissariatId: comBarumbu.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-008', firstName: 'Francine', lastName: 'Lukaku', phone: '+243830000004', email: 'f.lukaku@email.cd', gender: 'F', dateOfBirth: new Date('1987-12-03'), address: '78 Avenue de la Paix', city: 'Kinshasa', commune: 'Ndjili', latitude: -4.390, longitude: 15.355, lastLocation: 'Avenue de la Paix, Ndjili', lastLocationAt: new Date(Date.now() - 3 * 3600000), status: 'actif', verified: true, totalAlerts: 0, totalComplaints: 1, commissariatId: comNdjili.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-009', firstName: 'Joseph', lastName: 'Kyungu', phone: '+243830000006', email: 'j.kyungu@email.cd', gender: 'M', dateOfBirth: new Date('1975-06-22'), address: '23 Rue Katanga', city: 'Lubumbashi', commune: 'Kenya', latitude: -11.660, longitude: 27.479, lastLocation: 'Quartier Kenya, Lubumbashi', lastLocationAt: new Date(Date.now() - 12 * 3600000), status: 'actif', verified: true, totalAlerts: 0, totalComplaints: 1, commissariatId: comLubumbashi.id } });
+  await prisma.citizen.create({ data: { reference: 'CIT-2024-010', firstName: 'Bernard', lastName: 'Koko', phone: '+243820000007', gender: 'M', dateOfBirth: new Date('1991-02-18'), address: '56 Avenue Kalamu', city: 'Kinshasa', commune: 'Kalamu', latitude: -4.330, longitude: 15.305, lastLocation: 'Quartier Kalamu', lastLocationAt: new Date(Date.now() - 48 * 3600000), status: 'bloque', verified: false, totalAlerts: 1, totalComplaints: 0, commissariatId: comKalamu.id } });
+
+  // === Criminals (avec données étendues) ===
+  const criminal1 = await prisma.criminal.create({
+    data: {
+      reference: 'CRIM-2024-001',
+      firstName: 'Alain', lastName: 'Mbala', alias: 'Le Boss',
+      dateOfBirth: new Date('1985-03-15'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-8547291',
+      physicalDesc: '1m78, cicatrice sur la joue gauche', height: '1m78', weight: '85 kg', eyeColor: 'Marron', hairColor: 'Noir', scars: 'Cicatrice joue gauche', tattoos: 'Aigle sur le bras droit',
+      status: 'recherche', dangerLevel: 'eleve',
+      lastKnownAddr: 'Quartier Matonge, Kinshasa', lastLatitude: -4.343, lastLongitude: 15.297,
+      lastSeenAt: new Date(Date.now() - 7 * 86400000), lastSeenLocation: 'Quartier Matonge, Kinshasa',
+      criminalHistory: 'Vol à main armée (2018), Trafic de stupéfiants (2020), Évasion (2023)',
+      knownAssociates: 'Serge Ilunga, Chantal Banza',
+      modusOperandi: 'Opère en groupe de 3-4, utilise armes de poing, cible institutions financières',
+      warrantStatus: 'actif', warrantIssuedAt: new Date('2024-11-16'),
+      notes: 'Très dangereux. À ne pas approcher seul. Contact brigade criminelle.',
+    },
+  });
+  const criminal2 = await prisma.criminal.create({
+    data: {
+      reference: 'CRIM-2024-002',
+      firstName: 'Serge', lastName: 'Ilunga', alias: 'Serge 9 vie',
+      dateOfBirth: new Date('1990-07-22'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-9083421',
+      physicalDesc: '1m72, tatouage bras droit', height: '1m72', weight: '75 kg', eyeColor: 'Noir', hairColor: 'Noir', scars: 'Aucune visible', tattoos: 'Dragon bras droit, étoile main gauche',
+      status: 'incarcere', dangerLevel: 'eleve',
+      lastKnownAddr: 'Ndjili, Kinshasa', lastLatitude: -4.385, lastLongitude: 15.360,
+      lastSeenAt: new Date(Date.now() - 30 * 86400000), lastSeenLocation: 'Prison Centrale de Makala',
+      criminalHistory: 'Trafic de stupéfiants (2019), Vol qualifié (2021), Homicide (2023)',
+      knownAssociates: 'Alain Mbala, Chantal Banza',
+      modusOperandi: 'Spécialiste du trafic de drogue, réseau dans les marchés',
+      warrantStatus: 'aucun',
+      notes: 'Incarcéré à Makala. Procédure en cours.',
+    },
+  });
+  const criminal3 = await prisma.criminal.create({
+    data: {
+      reference: 'CRIM-2024-003',
+      firstName: 'Nadia', lastName: 'Kalonji', alias: null,
+      dateOfBirth: new Date('1995-11-08'), gender: 'F', nationality: 'Congolaise', idNumber: 'ID-9526173',
+      physicalDesc: '1m65, grain de beauté sur la tempe droite', height: '1m65', weight: '60 kg', eyeColor: 'Noir', hairColor: 'Noir', scars: 'Aucune', tattoos: 'Aucun',
+      status: 'libre', dangerLevel: 'faible',
+      lastKnownAddr: 'Gombe, Kinshasa', lastLatitude: -4.325, lastLongitude: 15.313,
+      lastSeenAt: new Date(Date.now() - 3 * 86400000), lastSeenLocation: 'Gombe, Kinshasa',
+      criminalHistory: 'Escroquerie (2022) - peine suspendue',
+      knownAssociates: 'Aucun connu',
+      modusOperandi: 'Escroquerie en ligne, faux investissements',
+      warrantStatus: 'aucun',
+      notes: 'Libre sous surveillance judiciaire.',
+    },
+  });
+  const criminal4 = await prisma.criminal.create({
+    data: {
+      reference: 'CRIM-2024-004',
+      firstName: 'Hervé', lastName: 'Nkulu', alias: 'Hervé Cash',
+      dateOfBirth: new Date('1988-01-30'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-8839102',
+      physicalDesc: '1m80, barbe fine', height: '1m80', weight: '80 kg', eyeColor: 'Marron', hairColor: 'Noir', scars: 'Cicatrice sourcil gauche', tattoos: 'Cash sur le torse',
+      status: 'sous_surveillance', dangerLevel: 'moyen',
+      lastKnownAddr: 'Lubumbashi, Haut-Katanga', lastLatitude: -11.660, lastLongitude: 27.479,
+      lastSeenAt: new Date(Date.now() - 1 * 86400000), lastSeenLocation: 'Centre-ville, Lubumbashi',
+      criminalHistory: 'Fraude fiscale (2020), Blanchiment d\'argent (2023)',
+      knownAssociates: 'Réseau affaires Lubumbashi',
+      modusOperandi: 'Fraude financière, sociétés écrans',
+      warrantStatus: 'expire',
+      notes: 'Port de bracelet électronique. Doit se présenter au commissariat 2x/semaine.',
+    },
+  });
+  const criminal5 = await prisma.criminal.create({
+    data: {
+      reference: 'CRIM-2024-005',
+      firstName: 'Pascal', lastName: 'Mwamba', alias: 'Paco',
+      dateOfBirth: new Date('1992-05-14'), gender: 'M', nationality: 'Congolaise', idNumber: 'ID-9251480',
+      physicalDesc: '1m75, lunettes, cheveux rasés', height: '1m75', weight: '70 kg', eyeColor: 'Marron', hairColor: 'Noir', scars: 'Brûlure avant-bras gauche', tattoos: 'Croix sur épaule',
+      status: 'recherche', dangerLevel: 'moyen',
+      lastKnownAddr: 'Goma, Nord-Kivu', lastLatitude: -1.658, lastLongitude: 29.223,
+      lastSeenAt: new Date(Date.now() - 2 * 86400000), lastSeenLocation: 'Frontière Rwanda, Goma',
+      criminalHistory: 'Contrebande (2021), Violence armée (2023)',
+      knownAssociates: 'Groupes armés Nord-Kivu',
+      modusOperandi: 'Trafic frontalier, contrebande minerais',
+      warrantStatus: 'actif', warrantIssuedAt: new Date('2024-12-02'),
+      notes: 'Aperçu à la frontière. Probablement fui au Rwanda.',
+    },
+  });
+  const criminal6 = await prisma.criminal.create({
+    data: {
+      reference: 'CRIM-2024-006',
+      firstName: 'Chantal', lastName: 'Banza', alias: 'Maman Chantal',
+      dateOfBirth: new Date('1978-09-20'), gender: 'F', nationality: 'Congolaise', idNumber: 'ID-7865234',
+      physicalDesc: '1m60, taille forte', height: '1m60', weight: '90 kg', eyeColor: 'Noir', hairColor: 'Noir', scars: 'Aucune', tattoos: 'Aucun',
+      status: 'incarcere', dangerLevel: 'eleve',
+      lastKnownAddr: 'Barumbu, Kinshasa', lastLatitude: -4.331, lastLongitude: 15.313,
+      lastSeenAt: new Date(Date.now() - 60 * 86400000), lastSeenLocation: 'Prison Centrale de Makala',
+      criminalHistory: 'Trafic de stupéfiants (2015), Recel (2018), Trafic d\'êtres humains (2022)',
+      knownAssociates: 'Alain Mbala, Serge Ilunga',
+      modusOperandi: 'Chef présumé réseau narcotique Barumbu-Matonge',
+      warrantStatus: 'aucun',
+      notes: 'Incarcérée. Procès en cours pour trafic d\'êtres humains.',
+    },
+  });
+
+  // === Preuves et pièces à conviction ===
+  await prisma.evidence.create({ data: { criminalId: criminal1.id, type: 'photo', title: 'Photo de surveillance', description: 'Image captée par caméra de surveillance lors du vol à la Banque Commerce', fileUrl: 'https://images.unsplash.com/photo-1565514020179-026b92b84bb6?w=400', fileName: 'surveillance_001.jpg', fileSize: 245678, collectedAt: new Date('2024-11-15'), collectedBy: 'Insp. Marie Tshisekedi', caseId: 'case-001' } });
+  await prisma.evidence.create({ data: { criminalId: criminal1.id, type: 'document', title: 'Relevé téléphonique', description: 'Relevé des communications téléphoniques du suspect', fileUrl: '/docs/releve-tel-001.pdf', fileName: 'releve_tel_001.pdf', fileSize: 1024000, collectedAt: new Date('2024-11-18'), collectedBy: 'Comm. Jean Mukendi' } });
+  await prisma.evidence.create({ data: { criminalId: criminal1.id, type: 'temoignage', title: 'Témoignage employé banque', description: 'Déposition du caissier de la Banque Commerce', fileUrl: '/docs/temoignage-001.pdf', fileName: 'temoignage_001.pdf', fileSize: 524288, collectedAt: new Date('2024-11-16'), collectedBy: 'Insp. Marie Tshisekedi' } });
+  await prisma.evidence.create({ data: { criminalId: criminal2.id, type: 'photo', title: 'Saisie de stupéfiants', description: 'Photo de la drogue saisie lors de l\'arrestation', fileUrl: 'https://images.unsplash.com/photo-1583912267550-d1b1a8c6fe5e?w=400', fileName: 'saisie_drogue.jpg', fileSize: 387200, collectedAt: new Date('2024-10-20'), collectedBy: 'Ag. Patrick Lumumba' } });
+  await prisma.evidence.create({ data: { criminalId: criminal2.id, type: 'photo', title: 'Photo d\'arrestation', description: 'Photo lors de l\'arrestation', fileUrl: 'https://images.unsplash.com/photo-1582736317407-4c1be88c9815?w=400', fileName: 'arrestation.jpg', fileSize: 412800, collectedAt: new Date('2024-10-20'), collectedBy: 'Ag. Patrick Lumumba' } });
+  await prisma.evidence.create({ data: { criminalId: criminal2.id, type: 'document', title: 'Rapport d\'analyse toxicologique', description: 'Analyse des substances saisies', fileUrl: '/docs/analyse-002.pdf', fileName: 'analyse_002.pdf', fileSize: 856000, collectedAt: new Date('2024-10-25'), collectedBy: 'Labo Police Scientifique' } });
+  await prisma.evidence.create({ data: { criminalId: criminal4.id, type: 'photo', title: 'Documents financiers', description: 'Photos des documents comptables saisis', fileUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400', fileName: 'docs_financiers.jpg', fileSize: 524288, collectedAt: new Date('2024-08-05'), collectedBy: 'Comm. Clarisse Mbuyi' } });
+  await prisma.evidence.create({ data: { criminalId: criminal4.id, type: 'document', title: 'Relevés bancaires', description: 'Relevés des comptes offshore', fileUrl: '/docs/bancaire-004.pdf', fileName: 'releves_bancaires.pdf', fileSize: 2048000, collectedAt: new Date('2024-08-10'), collectedBy: 'Comm. Clarisse Mbuyi' } });
+  await prisma.evidence.create({ data: { criminalId: criminal5.id, type: 'photo', title: 'Photo frontière', description: 'Photo du suspect à la frontière Rwanda', fileUrl: 'https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=400', fileName: 'frontiere_005.jpg', fileSize: 312400, collectedAt: new Date('2024-12-01'), collectedBy: 'Service Immigration' } });
+  await prisma.evidence.create({ data: { criminalId: criminal5.id, type: 'video', title: 'Vidéo surveillance frontière', description: 'Enregistrement caméra frontière Grand Barrier', fileUrl: '/videos/frontiere_005.mp4', fileName: 'frontiere_005.mp4', fileSize: 5120000, collectedAt: new Date('2024-12-01'), collectedBy: 'Service Immigration' } });
+  await prisma.evidence.create({ data: { criminalId: criminal6.id, type: 'photo', title: 'Saisie marchandises', description: 'Marchandises issues du trafic', fileUrl: 'https://images.unsplash.com/photo-1572883454114-1cf0031ede2a?w=400', fileName: 'saisie_006.jpg', fileSize: 412800, collectedAt: new Date('2022-06-15'), collectedBy: 'Comm. Clarisse Mbuyi' } });
 
   // Cases
   const case1 = await prisma.case.create({ data: { reference: 'DOS-2024-001', title: 'Vol à main armée - Banque Commerce', type: 'vol', status: 'en_enquete', priority: 'urgente', description: 'Vol à main armée perpétré contre la Banque de Commerce de la Gombe. Les malfaiteurs ont emporté une somme importante en devises.', location: 'Banque de Commerce, Gombe', incidentDate: new Date('2024-11-15'), commissariatId: comGombe.id, assignedToId: officer1.id } });
@@ -70,7 +216,7 @@ async function main() {
   await prisma.alert.create({ data: { reference: 'ALT-2024-003', type: 'accident', priority: 'moyenne', status: 'traitee', description: 'Accident de circulation grave sur le Boulevard du 30 Juin. Un véhicule a renversé un piéton.', location: 'Boulevard 30 Juin, Kalamu', latitude: -4.328, longitude: 15.309, citizenName: 'Jacques Mutombo', citizenPhone: '+243820000003', commissariatId: comKalamu.id, assignedToId: officer4.id, responseTime: 12, createdAt: new Date(now.getTime() - 2 * 3600000) } });
   await prisma.alert.create({ data: { reference: 'ALT-2024-004', type: 'incendie', priority: 'urgente', status: 'en_cours', description: 'Incendie dans un entrepôt à Ndjili. Les flammes se propagent aux bâtiments voisins.', location: 'Zone Industrielle, Ndjili', latitude: -4.385, longitude: 15.360, citizenName: 'Emmanuel Lunda', citizenPhone: '+243820000004', commissariatId: comNdjili.id, assignedToId: officer5.id, createdAt: new Date(now.getTime() - 8 * 60000) } });
   await prisma.alert.create({ data: { reference: 'ALT-2024-005', type: 'agression', priority: 'haute', status: 'cloturee', description: 'Rixes entre groupes rivaux dans le quartier Kenya. Plusieurs blessés signalés.', location: 'Quartier Kenya, Lubumbashi', citizenName: 'Anonyme', citizenPhone: '+243820000005', commissariatId: comLubumbashi.id, assignedToId: officer6.id, responseTime: 25, createdAt: new Date(now.getTime() - 24 * 3600000) } });
-  await prisma.alert.create({ data: { reference: 'ALT-2024-006', type: 'vol', priority: 'moyenne', status: 'recue', description: 'Vol de téléphone dans un taxi moto. Le voleur a pris la fuite vers le centre-ville.', location: 'Carrefour Goma', latitude: -1.658, longitude: 29.223, citizenName: 'Aimée Kabuo', citizenPhone: '+243820000006', commissariatId: comGoma.id, createdAt: new Date(now.getTime() - 45 * 60000) } });
+  await prisma.alert.create({ data: { reference: 'ALT-2024-006', type: 'vol', priority: 'moyenne', status: 'recue', description: 'Vol de téléphone dans un taxi moto. Le voleur a pris la fuite vers le centre-ville.', location: 'Carrefour Goma', latitude: -1.658, longitude: 29.223, citizenName: 'Aimée Kabuo', citizenPhone: '+243820000005', commissariatId: comGoma.id, createdAt: new Date(now.getTime() - 45 * 60000) } });
   await prisma.alert.create({ data: { reference: 'ALT-2024-007', type: 'autre', priority: 'basse', status: 'traitee', description: 'Nuisances sonores répétées dans le quartier Kalamu. Musique forte après 22h.', location: 'Quartier Kalamu', citizenName: 'Bernard Koko', citizenPhone: '+243820000007', commissariatId: comKalamu.id, assignedToId: officer4.id, responseTime: 45, createdAt: new Date(now.getTime() - 48 * 3600000) } });
   await prisma.alert.create({ data: { reference: 'ALT-2024-008', type: 'agression', priority: 'urgente', status: 'en_cours', description: 'Femme agressée devant son domicile à la Gombe. L\'agresseur est toujours sur les lieux.', location: 'Ave. Mongala, Gombe', latitude: -4.320, longitude: 15.315, citizenName: 'Voisin anonyme', citizenPhone: '+243820000008', commissariatId: comGombe.id, assignedToId: officer1.id, createdAt: new Date(now.getTime() - 5 * 60000) } });
 

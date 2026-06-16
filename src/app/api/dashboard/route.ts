@@ -58,6 +58,10 @@ export async function GET() {
     // Officer count
     const officerCount = await db.officer.count();
 
+    // Citizen count
+    const citizenCount = await db.citizen.count();
+    const activeCitizens = await db.citizen.count({ where: { status: 'actif' } });
+
     // Helper to format counts
     const toCounts = (raw: Array<{ status: string; _count: { status: number } }>, keys: string[]) => {
       const map = Object.fromEntries(raw.map((item) => [item.status, item._count.status]));
@@ -85,6 +89,8 @@ export async function GET() {
       recentCases,
       stationCount,
       officerCount,
+      citizenCount,
+      activeCitizens,
     });
   } catch (error) {
     console.error('Dashboard error:', error);

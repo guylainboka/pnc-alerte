@@ -53,6 +53,7 @@ model Commissariat {
   alerts         Alert[]
   cases          Case[]
   complaints     Complaint[]
+  citizens       Citizen[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
@@ -71,8 +72,58 @@ model Officer {
   assignedAlerts    Alert[]
   assignedCases     Case[]
   reviewedComplaints Complaint[]
+  user              User?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+}
+
+// Utilisateurs du système (personnel PNC avec authentification)
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         String    // admin, commissaire, inspecteur, agent
+  phone        String?
+  officerId    String?   @unique
+  officer      Officer?  @relation(fields: [officerId], references: [id])
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// Citoyens inscrits via l'application mobile
+model Citizen {
+  id              String       @id @default(cuid())
+  reference       String       @unique
+  firstName       String
+  lastName        String
+  phone           String       @unique
+  email           String?
+  passwordHash    String?
+  gender          String?
+  dateOfBirth     DateTime?
+  address         String?
+  city            String?
+  commune         String?
+  // Localisation actuelle
+  latitude        Float?
+  longitude       Float?
+  lastLocation    String?
+  lastLocationAt  DateTime?
+  // Statut
+  status          String       @default("actif") // actif, bloque, suspendu
+  verified        Boolean      @default(false)
+  totalAlerts     Int          @default(0)
+  totalComplaints Int          @default(0)
+  // Relations
+  commissariatId  String?
+  commissariat    Commissariat? @relation(fields: [commissariatId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 // Alertes citoyennes depuis l'application mobile
@@ -88,6 +139,7 @@ model Alert {
   longitude      Float?
   citizenName    String?
   citizenPhone   String?
+  citizenId      String?      // Lien vers le citoyen inscrit
   commissariatId String
   commissariat   Commissariat @relation(fields: [commissariatId], references: [id])
   assignedToId   String?
@@ -118,25 +170,67 @@ model Case {
   updatedAt      DateTime     @updatedAt
 }
 
-// Base de données criminelle
+// Base de données criminelle - étendue avec preuves, images et localisation
 model Criminal {
-  id             String         @id @default(cuid())
-  reference      String         @unique
-  firstName      String
-  lastName       String
-  alias          String?
-  dateOfBirth    DateTime?
-  gender         String?
-  nationality    String?
-  idNumber       String?
-  photo          String?
-  physicalDesc   String?
-  status         String         // recherche, incarcere, libre, sous_surveillance
-  dangerLevel    String         // eleve, moyen, faible
-  lastKnownAddr  String?
-  cases          CaseCriminal[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  reference        String         @unique
+  firstName        String
+  lastName         String
+  alias            String?
+  dateOfBirth      DateTime?
+  gender           String?
+  nationality      String?
+  idNumber         String?
+  // Photos et images (plusieurs)
+  photo            String?        // Photo principale
+  // Description physique détaillée
+  physicalDesc     String?
+  height           String?        // Taille
+  weight           String?        // Poids
+  eyeColor         String?        // Couleur des yeux
+  hairColor        String?        // Couleur des cheveux
+  scars            String?        // Cicatrices
+  tattoos          String?        // Tatouages
+  // Statut et danger
+  status           String         // recherche, incarcere, libre, sous_surveillance
+  dangerLevel      String         // eleve, moyen, faible
+  // Localisation
+  lastKnownAddr    String?
+  lastLatitude     Float?
+  lastLongitude    Float?
+  lastSeenAt       DateTime?      // Dernière fois vu
+  lastSeenLocation String?        // Dernière localisation connue (texte)
+  // Informations criminelles
+  criminalHistory  String?        // Historique criminel
+  knownAssociates  String?        // Complices connus
+  modusOperandi    String?        // Mode opératoire
+  warrantStatus    String?        // Statut du mandat (actif, expiré, aucun)
+  warrantIssuedAt  DateTime?      // Date d'émission du mandat
+  // Notes internes
+  notes            String?
+  // Relations
+  cases            CaseCriminal[]
+  evidence         Evidence[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+// Preuves et pièces à conviction
+model Evidence {
+  id          String   @id @default(cuid())
+  criminalId  String
+  criminal    Criminal @relation(fields: [criminalId], references: [id])
+  type        String   // photo, video, document, temoignage, autre
+  title       String
+  description String?
+  fileUrl     String   // URL du fichier (image, document, etc.)
+  fileName    String?
+  fileSize    Int?
+  // Métadonnées
+  collectedAt DateTime? // Date de collecte
+  collectedBy String?   // Agent qui a collecté
+  caseId      String?   // Dossier lié (optionnel)
+  createdAt   DateTime  @default(now())
 }
 
 model CaseCriminal {
@@ -163,6 +257,7 @@ model Complaint {
   plaintiffPhone String
   plaintiffEmail String?
   plaintiffAddr  String?
+  citizenId      String?      // Lien vers le citoyen inscrit
   commissariatId String
   commissariat   Commissariat @relation(fields: [commissariatId], references: [id])
   reviewedById   String?

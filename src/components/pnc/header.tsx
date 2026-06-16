@@ -1,7 +1,7 @@
 'use client';
 
 import { useAppStore, type Section } from '@/lib/store';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search, User, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -19,12 +20,14 @@ const sectionTitles: Record<Section, string> = {
   cases: 'Gestion des Dossiers',
   criminals: 'Base de Données Criminelle',
   complaints: 'Gestion des Plaintes',
+  citizens: 'Citoyens Inscrits',
+  users: 'Gestion des Utilisateurs PNC',
   services: 'Intégrations Externes',
   stations: 'Commissariats & Juridictions',
 };
 
 export function Header() {
-  const { activeSection } = useAppStore();
+  const { activeSection, user, logout } = useAppStore();
 
   return (
     <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b px-6 py-3">
@@ -82,29 +85,46 @@ export function Header() {
           </DropdownMenu>
 
           {/* User */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 px-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    CP
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium leading-tight">Comm. Mukendi</p>
-                  <p className="text-[10px] text-muted-foreground">Commissaire Principal</p>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 px-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {user.firstName[0]}{user.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden md:block text-left">
+                    <p className="text-sm font-medium leading-tight">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground capitalize">{user.role}</p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="px-3 py-2 border-b">
+                  <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                  {user.officer && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {user.officer.rank} • {user.officer.commissariat.name}
+                    </p>
+                  )}
                 </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                Profil
-              </DropdownMenuItem>
-              <DropdownMenuItem>Paramètres</DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">Déconnexion</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  Profil
+                </DropdownMenuItem>
+                <DropdownMenuItem>Paramètres</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive" onClick={logout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>

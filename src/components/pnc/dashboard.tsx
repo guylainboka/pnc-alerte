@@ -12,7 +12,6 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
-  XCircle,
   Building2,
   Shield,
 } from 'lucide-react';
@@ -46,6 +45,8 @@ interface DashboardData {
   }>;
   stationCount: number;
   officerCount: number;
+  citizenCount: number;
+  activeCitizens: number;
 }
 
 const priorityColors: Record<string, string> = {
@@ -217,10 +218,10 @@ export function Dashboard() {
         </Card>
         <Card>
           <CardContent className="p-3 flex items-center gap-3">
-            <XCircle className="w-5 h-5 text-muted-foreground" />
+            <Users className="w-5 h-5 text-muted-foreground" />
             <div>
-              <p className="text-lg font-semibold">{data.criminalCounts.incarcere}</p>
-              <p className="text-xs text-muted-foreground">Incarcérés</p>
+              <p className="text-lg font-semibold">{data.citizenCount}</p>
+              <p className="text-xs text-muted-foreground">Citoyens inscrits</p>
             </div>
           </CardContent>
         </Card>

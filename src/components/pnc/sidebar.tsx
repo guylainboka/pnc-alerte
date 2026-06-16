@@ -13,8 +13,12 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  UserCircle,
+  LogOut,
+  Settings,
 } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 const menuItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'Tableau de Bord', icon: LayoutDashboard },
@@ -22,12 +26,14 @@ const menuItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'cases', label: 'Dossiers', icon: FolderOpen },
   { id: 'criminals', label: 'Base Criminelle', icon: Users },
   { id: 'complaints', label: 'Plaintes', icon: FileText },
+  { id: 'citizens', label: 'Citoyens Inscrits', icon: UserCircle },
+  { id: 'users', label: 'Utilisateurs PNC', icon: Settings },
   { id: 'services', label: 'Intégrations', icon: Globe },
   { id: 'stations', label: 'Commissariats', icon: Building2 },
 ];
 
 export function Sidebar() {
-  const { activeSection, setActiveSection, sidebarCollapsed, toggleSidebar } = useAppStore();
+  const { activeSection, setActiveSection, sidebarCollapsed, toggleSidebar, user, logout } = useAppStore();
 
   return (
     <aside
@@ -78,6 +84,36 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* User info & logout */}
+      {!sidebarCollapsed && user && (
+        <div className="px-2 pb-2">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/30">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-bold text-sidebar">
+                {user.firstName[0]}{user.lastName[0]}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/60 truncate capitalize">
+                {user.role}
+              </p>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent"
+              onClick={logout}
+              title="Déconnexion"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Collapse button */}
       <div className="p-3 border-t border-sidebar-border">

@@ -28,6 +28,9 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        evidence: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -45,18 +48,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      firstName,
-      lastName,
-      alias,
-      dateOfBirth,
-      gender,
-      nationality,
-      idNumber,
-      photo,
-      physicalDesc,
-      status,
-      dangerLevel,
-      lastKnownAddr,
+      firstName, lastName, alias, dateOfBirth, gender, nationality, idNumber,
+      photo, physicalDesc, height, weight, eyeColor, hairColor, scars, tattoos,
+      status, dangerLevel, lastKnownAddr, lastLatitude, lastLongitude,
+      lastSeenAt, lastSeenLocation, criminalHistory, knownAssociates,
+      modusOperandi, warrantStatus, warrantIssuedAt, notes,
     } = body;
 
     if (!firstName || !lastName || !dangerLevel) {
@@ -81,9 +77,7 @@ export async function POST(request: NextRequest) {
 
     const criminal = await db.criminal.create({
       data: {
-        reference,
-        firstName,
-        lastName,
+        reference, firstName, lastName,
         alias: alias ?? null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender: gender ?? null,
@@ -91,9 +85,25 @@ export async function POST(request: NextRequest) {
         idNumber: idNumber ?? null,
         photo: photo ?? null,
         physicalDesc: physicalDesc ?? null,
+        height: height ?? null,
+        weight: weight ?? null,
+        eyeColor: eyeColor ?? null,
+        hairColor: hairColor ?? null,
+        scars: scars ?? null,
+        tattoos: tattoos ?? null,
         status: status ?? 'recherche',
         dangerLevel,
         lastKnownAddr: lastKnownAddr ?? null,
+        lastLatitude: lastLatitude ?? null,
+        lastLongitude: lastLongitude ?? null,
+        lastSeenAt: lastSeenAt ? new Date(lastSeenAt) : null,
+        lastSeenLocation: lastSeenLocation ?? null,
+        criminalHistory: criminalHistory ?? null,
+        knownAssociates: knownAssociates ?? null,
+        modusOperandi: modusOperandi ?? null,
+        warrantStatus: warrantStatus ?? null,
+        warrantIssuedAt: warrantIssuedAt ? new Date(warrantIssuedAt) : null,
+        notes: notes ?? null,
       },
     });
 
