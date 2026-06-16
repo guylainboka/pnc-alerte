@@ -1,0 +1,202 @@
+// PNC - Police Nationale Congolaise - Centre de Commandement
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Hiérarchie géographique : Province → District → Sous-District → Commissariat
+model Province {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  districts District[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model District {
+  id            String        @id @default(cuid())
+  name          String
+  code          String
+  provinceId    String
+  province      Province      @relation(fields: [provinceId], references: [id])
+  sousDistricts SousDistrict[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model SousDistrict {
+  id            String        @id @default(cuid())
+  name          String
+  code          String
+  districtId    String
+  district      District      @relation(fields: [districtId], references: [id])
+  commissariats Commissariat[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Commissariat {
+  id             String       @id @default(cuid())
+  name           String
+  code           String
+  address        String?
+  phone          String?
+  sousDistrictId String
+  sousDistrict   SousDistrict @relation(fields: [sousDistrictId], references: [id])
+  officers       Officer[]
+  alerts         Alert[]
+  cases          Case[]
+  complaints     Complaint[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// Personnel de police
+model Officer {
+  id                String      @id @default(cuid())
+  matricule         String      @unique
+  firstName         String
+  lastName          String
+  rank              String      // Grade: Commissaire, Inspecteur, Agent, etc.
+  phone             String?
+  email             String?
+  commissariatId    String
+  commissariat      Commissariat @relation(fields: [commissariatId], references: [id])
+  assignedAlerts    Alert[]
+  assignedCases     Case[]
+  reviewedComplaints Complaint[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+// Alertes citoyennes depuis l'application mobile
+model Alert {
+  id             String       @id @default(cuid())
+  reference      String       @unique
+  type           String       // vol, agression, accident, incendie, autre
+  priority       String       // urgente, haute, moyenne, basse
+  status         String       // recue, en_cours, traitee, cloturee
+  description    String
+  location       String
+  latitude       Float?
+  longitude      Float?
+  citizenName    String?
+  citizenPhone   String?
+  commissariatId String
+  commissariat   Commissariat @relation(fields: [commissariatId], references: [id])
+  assignedToId   String?
+  assignedTo     Officer?     @relation(fields: [assignedToId], references: [id])
+  responseTime   Int?         // Temps de réponse en minutes
+  caseId         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// Dossiers criminels
+model Case {
+  id             String       @id @default(cuid())
+  reference      String       @unique
+  title          String
+  type           String       // vol, homicide, fraude, stupéfiants, violence, autre
+  status         String       // ouvert, en_enquete, en_instruction, jugement, cloture
+  priority       String       // urgente, haute, moyenne, basse
+  description    String
+  location       String?
+  incidentDate   DateTime?
+  commissariatId String
+  commissariat   Commissariat @relation(fields: [commissariatId], references: [id])
+  assignedToId   String?
+  assignedTo     Officer?     @relation(fields: [assignedToId], references: [id])
+  criminals      CaseCriminal[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// Base de données criminelle
+model Criminal {
+  id             String         @id @default(cuid())
+  reference      String         @unique
+  firstName      String
+  lastName       String
+  alias          String?
+  dateOfBirth    DateTime?
+  gender         String?
+  nationality    String?
+  idNumber       String?
+  photo          String?
+  physicalDesc   String?
+  status         String         // recherche, incarcere, libre, sous_surveillance
+  dangerLevel    String         // eleve, moyen, faible
+  lastKnownAddr  String?
+  cases          CaseCriminal[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model CaseCriminal {
+  id         String   @id @default(cuid())
+  caseId     String
+  case       Case     @relation(fields: [caseId], references: [id])
+  criminalId String
+  criminal   Criminal @relation(fields: [criminalId], references: [id])
+  role       String   // suspect, temoin, victime, accuse
+  createdAt  DateTime @default(now())
+
+  @@unique([caseId, criminalId])
+}
+
+// Plaintes des citoyens
+model Complaint {
+  id             String       @id @default(cuid())
+  reference      String       @unique
+  type           String       // vol, agression, harassment, corruption, autre
+  status         String       // soumise, en_revision, approuvee, rejetee, traitee
+  description    String
+  location       String?
+  plaintiffName  String
+  plaintiffPhone String
+  plaintiffEmail String?
+  plaintiffAddr  String?
+  commissariatId String
+  commissariat   Commissariat @relation(fields: [commissariatId], references: [id])
+  reviewedById   String?
+  reviewedBy     Officer?     @relation(fields: [reviewedById], references: [id])
+  reviewNotes    String?
+  caseId         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// Services externes pour intégration
+model ExternalService {
+  id          String      @id @default(cuid())
+  name        String
+  type        String      // justice, hopital, mairie, douane, immigration, autre
+  endpoint    String
+  apiKey      String?
+  status      String      // actif, inactif, erreur
+  lastSyncAt  DateTime?
+  description String?
+  logs        ServiceLog[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// Journal des communications avec les services externes
+model ServiceLog {
+  id           String          @id @default(cuid())
+  serviceId    String
+  service      ExternalService @relation(fields: [serviceId], references: [id])
+  direction    String          // envoi, reception
+  messageType  String          // requête, notification, sync
+  content      String
+  status       String          // succes, echec, en_attente
+  errorMessage String?
+  createdAt    DateTime        @default(now())
+}
