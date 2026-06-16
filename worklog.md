@@ -48,3 +48,21 @@ Stage Summary:
 - 10 citizens, 6 users, 6 criminals with 11 evidence items in seed data
 - All API routes tested and working
 - Lint clean, no runtime errors
+
+---
+Task ID: 3
+Agent: Main Developer
+Task: Fix React state update error in page.tsx (queueMicrotask during render)
+
+Work Log:
+- Identified root cause: useMounted hook used queueMicrotask(() => setMounted(true)) during render, triggering "Can't perform a React state update on a component that hasn't mounted yet" error
+- First attempt: replaced queueMicrotask with useEffect + setMounted(true) — this fixed the runtime error but introduced a lint error (react-hooks/set-state-in-effect)
+- Final fix: replaced useMounted with useSyncExternalStore pattern — returns false during SSR/hydration and true on client, the React-recommended approach for hydration-safe mounted checks
+- Removed unused useState/useEffect imports, switched to useSyncExternalStore
+- Verified with Agent Browser: login screen renders, no console errors, login flow works end-to-end, dashboard loads with all sections
+- Lint clean (0 errors, 0 warnings)
+
+Stage Summary:
+- React state update error resolved using useSyncExternalStore (no setState in effect, no side effects in render)
+- Lint passes cleanly
+- Full app verified working: login screen → demo login → dashboard with all 9 sections

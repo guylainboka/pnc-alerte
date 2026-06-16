@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useAppStore } from '@/lib/store';
 import { LoginScreen } from '@/components/pnc/login-screen';
 import { Sidebar } from '@/components/pnc/sidebar';
@@ -28,13 +28,14 @@ const sections = {
   stations: StationsSection,
 };
 
+// Hydration-safe mounted check using useSyncExternalStore.
+// Returns false during SSR and the initial hydration render, then true on the client.
 function useMounted() {
-  const [mounted, setMounted] = useState(false);
-  if (typeof window !== 'undefined' && !mounted) {
-    // Use a microtask to set mounted without blocking
-    queueMicrotask(() => setMounted(true));
-  }
-  return mounted;
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 }
 
 export default function PNCCommandCenter() {
