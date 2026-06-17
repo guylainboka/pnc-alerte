@@ -1,10 +1,17 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAppStore, type Section } from '@/lib/store';
-import { Bell, Search, User, LogOut } from 'lucide-react';
+import { Bell, Search, User, LogOut, Cloud, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +33,72 @@ const sectionTitles: Record<Section, string> = {
   stations: 'Commissariats & Juridictions',
 };
 
+function ConnectionBadge() {
+  const [status, setStatus] = useState<{
+    mode: 'supabase' | 'local';
+    configured: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/mobile/status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (active) {
+          setStatus({ mode: d.backend, configured: d.supabase });
+        }
+      })
+      .catch(() => active && setStatus({ mode: 'local', configured: false }));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const isSupabase = status?.mode === 'supabase';
+  const Icon = isSupabase ? Cloud : Database;
+  const label = isSupabase
+    ? 'Backend Supabase connecté — application mobile synchronisée'
+    : status?.configured
+    ? 'Supabase détecté'
+    : 'Mode local — configurez Supabase pour l\'application mobile';
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border">
+            <span
+              className={`relative flex h-2 w-2 ${
+                isSupabase ? '' : 'animate-pulse'
+              }`}
+            >
+              <span
+                className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  isSupabase
+                    ? 'bg-green-500 animate-ping'
+                    : 'bg-amber-500'
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isSupabase ? 'bg-green-600' : 'bg-amber-600'
+                }`}
+              />
+            </span>
+            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {isSupabase ? 'Mobile connecté' : 'Mode démo'}
+            </span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs max-w-xs">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export function Header() {
   const { activeSection, user, logout } = useAppStore();
 
@@ -40,6 +113,9 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Connection status (mobile/Supabase) */}
+          <ConnectionBadge />
+
           {/* Search */}
           <div className="relative hidden md:block">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

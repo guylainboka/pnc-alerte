@@ -106,3 +106,31 @@ Stage Summary:
 - New "Backend & Mobile" section in the app with architecture diagram, live status, config guide, and copyable mobile code snippets
 - Complete MOBILE_INTEGRATION.md documentation (13 sections) for the mobile dev team
 - To activate the real backend: user creates a Supabase project, runs the 2 SQL migrations, creates the storage bucket, fills .env — everything else is automatic
+
+---
+Task ID: 5
+Agent: Main Developer
+Task: Remove the "Backend & Mobile" UI panel, then build a real installable mobile SDK package + subtle connection badge for the existing mobile app to connect
+
+Work Log:
+- Removed the integration-section UI: deleted src/components/pnc/integration-section.tsx, removed import + sections entry from src/app/page.tsx, removed 'integration' from the Section type in src/lib/store.ts, removed the "Backend & Mobile" menu item + Smartphone import from src/components/pnc/sidebar.tsx. Sidebar back to 9 items.
+- Created mobile-sdk/ as a standalone installable TypeScript package:
+  • mobile-sdk/package.json — @pnc/mobile-sdk, depends on @supabase/supabase-js, optional peer dep on React Native AsyncStorage
+  • mobile-sdk/tsconfig.json — strict TS config targeting ESNext/bundler
+  • mobile-sdk/src/index.ts — full PNCClient class (620+ lines): auth (register/login/logout/me/updateLocation), alerts (sendSOS/listMine), complaints (submit/listMine), public (commissariats/wanted/status), upload (evidence), realtime (subscribeToWantedCriminals/subscribeToMyComplaints/subscribeToMyAlerts/generic subscribe). Includes typed PNCError, auto token management, AbortController timeout, dual storage (web localStorage / RN AsyncStorage / memory fallback). Compiles cleanly with tsc --noEmit.
+  • mobile-sdk/src/react.tsx — PNCProvider + usePNC hook for React Native (manages citizen state, login/register/logout/sendSOS/submitComplaint/refresh). Compiles cleanly.
+  • mobile-sdk/src/example-sos-screen.tsx — full reference React Native SOS screen showing how the existing mobile app uses the SDK (expo-location GPS, type picker, description, send to command center)
+  • mobile-sdk/README.md — complete usage guide: install, config, 9 numbered usage examples (init, register, login, SOS, complaint, realtime push notifications, background location, upload, wanted list), full API table, security notes, error handling
+- Excluded mobile-sdk/ from the web app's ESLint (it's a separate RN package, uses require() for optional AsyncStorage which is idiomatic in RN but flagged by Next.js lint)
+- Added a subtle live ConnectionBadge in the header (src/components/pnc/header.tsx): polls /api/mobile/status on mount, shows a green pulsing dot + "Mobile connecté" when Supabase is configured, or amber pulsing dot + "Mode démo" in local mode. Has a tooltip explaining the state. Unobtrusive — replaces the removed full panel.
+- Updated MOBILE_INTEGRATION.md intro to point to the SDK as the recommended method, with this doc as the underlying REST reference.
+- Verified with Agent Browser: login works, dashboard renders, sidebar has 9 items (no Backend & Mobile), the amber "Mode démo" badge appears in the header with working tooltip "Mode local — configurez Supabase pour l'application mobile". VLM screenshot analysis confirmed: badge visible with amber dot, 9 menu items, no errors. No console errors, no page errors.
+- Lint clean (0 errors, 0 warnings). SDK core files (index.ts, react.tsx) compile cleanly with tsc --noEmit.
+
+Stage Summary:
+- The "Backend & Mobile" UI panel is removed as requested
+- A real installable mobile SDK (@pnc/mobile-sdk) is built: the existing mobile app copies the mobile-sdk/ folder, configures 3 env vars, and uses PNCClient / usePNC hook to connect to this platform + shared Supabase backend
+- The SDK provides: auth (register/login/logout), SOS alerts, complaints, public data (commissariats/wanted criminals), file upload (Supabase Storage), and realtime subscriptions (new wanted criminals, complaint status changes, alert status changes) — everything the mobile app needs
+- A subtle header badge shows live connection state (green = Supabase/mobile connected, amber = demo mode) with a tooltip
+- All mobile API endpoints (/api/mobile/*) remain functional and tested
+- To go live: user creates a Supabase project, runs the 2 SQL migrations, fills .env, copies mobile-sdk/ into their existing mobile app, configures 3 env vars — connection is automatic

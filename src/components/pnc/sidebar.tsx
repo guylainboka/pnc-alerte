@@ -16,7 +16,6 @@ import {
   UserCircle,
   LogOut,
   Settings,
-  Smartphone,
 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,6 @@ const menuItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'users', label: 'Utilisateurs PNC', icon: Settings },
   { id: 'services', label: 'Intégrations', icon: Globe },
   { id: 'stations', label: 'Commissariats', icon: Building2 },
-  { id: 'integration', label: 'Backend & Mobile', icon: Smartphone },
 ];
 
 export function Sidebar() {

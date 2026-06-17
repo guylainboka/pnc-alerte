@@ -9,8 +9,7 @@ export type Section =
   | 'citizens'
   | 'users'
   | 'services'
-  | 'stations'
-  | 'integration';
+  | 'stations';
 
 export interface AuthUser {
   id: string;

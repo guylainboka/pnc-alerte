@@ -14,7 +14,6 @@ import { CitizensSection } from '@/components/pnc/citizens-section';
 import { UsersSection } from '@/components/pnc/users-section';
 import { ServicesSection } from '@/components/pnc/services-section';
 import { StationsSection } from '@/components/pnc/stations-section';
-import { IntegrationSection } from '@/components/pnc/integration-section';
 import { cn } from '@/lib/utils';
 
 const sections = {
@@ -27,7 +26,6 @@ const sections = {
   users: UsersSection,
   services: ServicesSection,
   stations: StationsSection,
-  integration: IntegrationSection,
 };
 
 // Hydration-safe mounted check using useSyncExternalStore.

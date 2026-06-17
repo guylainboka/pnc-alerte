@@ -1,0 +1,38 @@
+{
+  "name": "@pnc/mobile-sdk",
+  "version": "1.0.0",
+  "description": "SDK client JavaScript/TypeScript pour connecter l'application mobile citoyenne au Centre de Commandement PNC et au backend Supabase partagé.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "pnc",
+    "police",
+    "congo",
+    "rdc",
+    "citizen",
+    "mobile",
+    "supabase",
+    "realtime"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/react-native": "^0.73.0"
+  },
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": "*"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    }
+  }
+}

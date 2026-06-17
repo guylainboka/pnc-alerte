@@ -1,6 +1,12 @@
 # Guide d'Intégration — Application Mobile PNC ↔ Centre de Commandement
 
-Ce document explique comment connecter l'application mobile citoyenne au Centre de Commandement PNC via un backend **Supabase** partagé.
+Ce document explique comment connecter l'application mobile citoyenne (**déjà existante**) au Centre de Commandement PNC via un backend **Supabase** partagé.
+
+> 💡 **Méthode recommandée** : utilisez le **SDK officiel `@pnc/mobile-sdk`** (dossier `mobile-sdk/`).
+> Il encapsule toute la logique d'authentification, d'envoi d'alertes, de plaintes et de notifications temps réel.
+> Voir `mobile-sdk/README.md` pour l'installation et `mobile-sdk/src/example-sos-screen.tsx` pour un exemple complet.
+>
+> Ce document décrit l'architecture et les endpoints REST sous-jacents (utile si vous n'utilisez pas le SDK).
 
 ---
 
