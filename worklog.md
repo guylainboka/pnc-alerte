@@ -98,3 +98,31 @@ Stage Summary:
 - Web Share API for sharing alerts, complaints, and app
 - Dark mode applied consistently across all screens
 - Build successful with no errors
+
+---
+Task ID: 3-4-realtime-screens
+Agent: Super Z (main)
+Task: Activer Realtime sur Supabase + connecter les écrans existants à Supabase
+
+Work Log:
+- Exécuté `scripts/enable-realtime.py` pour activer Realtime sur 8 tables PNC (sos_calls, signalements, plaintes, notifications, alertes_officielles, convocations, personnes_disparues, profiles)
+- Activé `REPLICA IDENTITY FULL` sur 5 tables clés pour les updates/delete en Realtime
+- Vérification finale : 14 tables PNC en Realtime
+- Audité les écrans existants : ConvocationsScreen, NotificationsScreen, PersonnesDisparuesScreen, AlertesScreen, MesAlertesScreen, AlerteDetailScreen — tous utilisaient des données mock
+- Créé `src/lib/data-service.ts` : service unifié avec types TS, fetch Supabase, hooks Realtime, helpers de formatage
+- Mis à jour `ConvocationsScreen.tsx` : fetch `getMyConvocations()` + Realtime sur table convocations + status badges + gestion expired
+- Mis à jour `NotificationsScreen.tsx` : fetch `getMyNotifications()` + Realtime + marquer comme lu (single + all) + navigation via screen_target
+- Mis à jour `PersonnesDisparuesScreen.tsx` : fetch `getPersonnesDisparues()` + Realtime + recherche + bouton appel téléphonique
+- Mis à jour `AlertesScreen.tsx` : fetch `getOfficialAlerts()` + Realtime + badge "En direct" + 3 tabs (officiel/citoyenne/mes-alertes)
+- Mis à jour `MesAlertesScreen.tsx` : fetch unifié (signalements + plaintes + SOS via Promise.all) + stats + filtres + timeline avec updates
+- Mis à jour `AlerteDetailScreen.tsx` : fetch par ID depuis selectedAlertId + fallback
+- Corrigé erreur TypeScript (status SOS typé explicitement en AlertStatus)
+- Build Next.js réussi : `✓ Compiled successfully in 5.3s`
+
+Stage Summary:
+- Realtime opérationnel sur 14 tables Supabase (publication + replica identity full)
+- 6 écrans PNC Alerte connectés à Supabase avec données réelles + Realtime live
+- Service unifié `data-service.ts` créé (377 lignes) avec types TS stricts
+- Build de production OK, aucune erreur de compilation dans les fichiers modifiés
+- Le citoyen test `citoyen.test@pnc.cd` verra ses 3 éléments (SIG-2026-TEST01, SOS-2026-TEST01, PLT-2026-TEST01) dans Mes Alertes
+- Les notifications/convocations/alertes officielles se mettront à jour en temps réel sans rechargement

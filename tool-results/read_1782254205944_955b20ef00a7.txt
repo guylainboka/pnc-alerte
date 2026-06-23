@@ -1,0 +1,1014 @@
+     1→'use client'
+     2→
+     3→import { useAppStore } from '@/lib/store'
+     4→import {
+     5→  ChevronLeft, Car, Shield, Home, Heart, Flame, Droplets,
+     6→  Cloud, Baby, Stethoscope, ShoppingBag, Zap, Users, Smartphone,
+     7→  Biohazard, Search
+     8→} from 'lucide-react'
+     9→import { useState } from 'react'
+    10→
+    11→export interface ConseilCategory {
+    12→  id: string
+    13→  icon: typeof Car
+    14→  label: string
+    15→  color: string
+    16→  bg: string
+    17→  articles: ConseilArticle[]
+    18→}
+    19→
+    20→export interface ConseilArticle {
+    21→  id: string
+    22→  title: string
+    23→  readTime: string
+    24→  sections: { title: string; items: string[] }[]
+    25→}
+    26→
+    27→export const conseilCategories: ConseilCategory[] = [
+    28→  {
+    29→    id: 'securite-routiere',
+    30→    icon: Car,
+    31→    label: 'Sécurité routière',
+    32→    color: '#1E5EFF',
+    33→    bg: '#EBF0FF',
+    34→    articles: [
+    35→      {
+    36→        id: 'sr-1',
+    37→        title: 'Conseils pour la conduite nocturne',
+    38→        readTime: '4 min',
+    39→        sections: [
+    40→          {
+    41→            title: 'La conduite de nuit présente davantage de risques en raison de la faible visibilité.',
+    42→            items: [
+    43→              'Vérifiez le bon fonctionnement des phares.',
+    44→              'Réduisez votre vitesse.',
+    45→              'Gardez une distance de sécurité suffisante.',
+    46→              'Évitez l\'utilisation du téléphone au volant.',
+    47→              'Faites des pauses régulières lors des longs trajets.',
+    48→              'Restez attentif aux piétons et aux cyclistes.',
+    49→            ],
+    50→          },
+    51→        ],
+    52→      },
+    53→      {
+    54→        id: 'sr-2',
+    55→        title: 'Prévenir les accidents',
+    56→        readTime: '3 min',
+    57→        sections: [
+    58→          {
+    59→            title: 'Adoptez les bons réflexes pour éviter les accidents de la route.',
+    60→            items: [
+    61→              'Respectez le code de la route.',
+    62→              'Ne conduisez jamais sous l\'influence de l\'alcool ou de drogues.',
+    63→              'Portez toujours votre ceinture de sécurité.',
+    64→              'Utilisez un siège adapté pour les enfants.',
+    65→              'Respectez les limitations de vitesse.',
+    66→            ],
+    67→          },
+    68→        ],
+    69→      },
+    70→      {
+    71→        id: 'sr-3',
+    72→        title: 'En cas d\'accident',
+    73→        readTime: '3 min',
+    74→        sections: [
+    75→          {
+    76→            title: 'Les gestes à poser immédiatement après un accident de la route.',
+    77→            items: [
+    78→              'Sécurisez les lieux.',
+    79→              'Appelez les services d\'urgence.',
+    80→              'Portez assistance aux blessés sans les déplacer inutilement.',
+    81→              'Prenez des photos pour le constat.',
+    82→            ],
+    83→          },
+    84→        ],
+    85→      },
+    86→    ],
+    87→  },
+    88→  {
+    89→    id: 'cybercriminalite',
+    90→    icon: Shield,
+    91→    label: 'Cybercriminalité',
+    92→    color: '#8B5CF6',
+    93→    bg: '#F3F0FF',
+    94→    articles: [
+    95→      {
+    96→        id: 'cy-1',
+    97→        title: 'Les arnaques en ligne les plus courantes',
+    98→        readTime: '5 min',
+    99→        sections: [
+   100→          {
+   101→            title: 'Les fraudeurs utilisent Internet pour voler des informations personnelles ou de l\'argent.',
+   102→            items: [
+   103→              'Messages promettant des gains rapides.',
+   104→              'Demandes urgentes d\'argent.',
+   105→              'Liens suspects.',
+   106→              'Offres trop belles pour être vraies.',
+   107→              'Faux services clients.',
+   108→            ],
+   109→          },
+   110→          {
+   111→            title: 'Comment se protéger',
+   112→            items: [
+   113→              'Ne partagez jamais vos mots de passe.',
+   114→              'Activez l\'authentification à deux facteurs.',
+   115→              'Vérifiez les adresses des sites web.',
+   116→              'Utilisez des mots de passe complexes.',
+   117→              'Mettez régulièrement vos applications à jour.',
+   118→            ],
+   119→          },
+   120→        ],
+   121→      },
+   122→      {
+   123→        id: 'cy-2',
+   124→        title: 'Protection des réseaux sociaux',
+   125→        readTime: '4 min',
+   126→        sections: [
+   127→          {
+   128→            title: 'Protégez votre vie privée sur les réseaux sociaux.',
+   129→            items: [
+   130→              'Limitez les informations publiques.',
+   131→              'N\'acceptez pas les inconnus.',
+   132→              'Vérifiez les paramètres de confidentialité.',
+   133→              'Signalez les comptes frauduleux.',
+   134→            ],
+   135→          },
+   136→        ],
+   137→      },
+   138→    ],
+   139→  },
+   140→  {
+   141→    id: 'cambriolage',
+   142→    icon: Home,
+   143→    label: 'Cambriolage',
+   144→    color: '#F59E0B',
+   145→    bg: '#FFF8EB',
+   146→    articles: [
+   147→      {
+   148→        id: 'cb-1',
+   149→        title: 'Comment sécuriser votre domicile',
+   150→        readTime: '4 min',
+   151→        sections: [
+   152→          {
+   153→            title: 'Adoptez des mesures simples pour protéger votre maison contre les intrusions.',
+   154→            items: [
+   155→              'Verrouillez toujours les portes et fenêtres.',
+   156→              'Installez un éclairage extérieur.',
+   157→              'Utilisez des serrures de qualité.',
+   158→              'Installez une alarme ou une caméra.',
+   159→              'Ne publiez pas vos absences sur les réseaux sociaux.',
+   160→            ],
+   161→          },
+   162→          {
+   163→            title: 'Pendant une absence prolongée',
+   164→            items: [
+   165→              'Demandez à un voisin de surveiller votre domicile.',
+   166→              'Faites relever votre courrier.',
+   167→              'Utilisez des minuteries pour les lumières.',
+   168→            ],
+   169→          },
+   170→          {
+   171→            title: 'En cas de cambriolage',
+   172→            items: [
+   173→              'N\'entrez pas immédiatement dans le logement.',
+   174→              'Appelez la police.',
+   175→              'Ne touchez à rien avant l\'arrivée des autorités.',
+   176→              'Dressez la liste des biens volés.',
+   177→            ],
+   178→          },
+   179→        ],
+   180→      },
+   181→    ],
+   182→  },
+   183→  {
+   184→    id: 'violence-domestique',
+   185→    icon: Heart,
+   186→    label: 'Violence domestique',
+   187→    color: '#EC4899',
+   188→    bg: '#FDF2F8',
+   189→    articles: [
+   190→      {
+   191→        id: 'vd-1',
+   192→        title: 'Reconnaître les signes',
+   193→        readTime: '5 min',
+   194→        sections: [
+   195→          {
+   196→            title: 'La violence domestique peut être physique, psychologique, économique ou sexuelle.',
+   197→            items: [
+   198→              'Menaces répétées.',
+   199→              'Contrôle excessif.',
+   200→              'Humiliations.',
+   201→              'Isolement forcé.',
+   202→              'Violences physiques.',
+   203→            ],
+   204→          },
+   205→          {
+   206→            title: 'Comment obtenir de l\'aide',
+   207→            items: [
+   208→              'Contactez les services d\'urgence en cas de danger.',
+   209→              'Parlez à une personne de confiance.',
+   210→              'Contactez une association spécialisée.',
+   211→              'Conservez les preuves des violences.',
+   212→            ],
+   213→          },
+   214→          {
+   215→            title: 'Plan de sécurité',
+   216→            items: [
+   217→              'Préparez un contact d\'urgence.',
+   218→              'Gardez vos documents importants accessibles.',
+   219→              'Identifiez un lieu sûr où vous réfugier.',
+   220→            ],
+   221→          },
+   222→        ],
+   223→      },
+   224→    ],
+   225→  },
+   226→  {
+   227→    id: 'incendie',
+   228→    icon: Flame,
+   229→    label: 'Incendie',
+   230→    color: '#FF3B30',
+   231→    bg: '#FFF0EF',
+   232→    articles: [
+   233→      {
+   234→        id: 'in-1',
+   235→        title: 'Prévenir les incendies domestiques',
+   236→        readTime: '4 min',
+   237→        sections: [
+   238→          {
+   239→            title: 'Les incendies domestiques sont souvent dus à la négligence. Voici les précautions essentielles.',
+   240→            items: [
+   241→              'Ne laissez jamais de cuisinière allumée sans surveillance.',
+   242→              'Vérifiez régulièrement les installations électriques.',
+   243→              'Ne surchargez pas les prises électriques.',
+   244→              'Gardez les allumettes et briquets hors de portée des enfants.',
+   245→              'Installez des détecteurs de fumée dans chaque pièce.',
+   246→            ],
+   247→          },
+   248→        ],
+   249→      },
+   250→      {
+   251→        id: 'in-2',
+   252→        title: 'Utilisation sécurisée du gaz',
+   253→        readTime: '3 min',
+   254→        sections: [
+   255→          {
+   256→            title: 'Le gaz domestique peut être dangereux s\'il est mal utilisé.',
+   257→            items: [
+   258→              'Vérifiez régulièrement les tuyaux et raccords.',
+   259→              'Ne stockez pas de bouteilles de gaz à l\'intérieur.',
+   260→              'En cas de fuite, n\'allumez aucun appareil électrique.',
+   261→              'Aérez immédiatement la pièce.',
+   262→            ],
+   263→          },
+   264→        ],
+   265→      },
+   266→      {
+   267→        id: 'in-3',
+   268→        title: 'Que faire en cas d\'incendie ?',
+   269→        readTime: '3 min',
+   270→        sections: [
+   271→          {
+   272→            title: 'Les gestes qui sauvent en cas d\'incendie.',
+   273→            items: [
+   274→              'Alertez immédiatement les occupants et les pompiers (119).',
+   275→              'Évacuez le bâtiment par les issues de secours.',
+   276→              'Ne prenez pas l\'ascenseur.',
+   277→              'Restez bas — la fumée monte.',
+   278→              'Fermez les portes derrière vous pour ralentir la propagation.',
+   279→            ],
+   280→          },
+   281→        ],
+   282→      },
+   283→      {
+   284→        id: 'in-4',
+   285→        title: 'Utilisation d\'un extincteur',
+   286→        readTime: '2 min',
+   287→        sections: [
+   288→          {
+   289→            title: 'Savoir utiliser un extincteur peut sauver des vies.',
+   290→            items: [
+   291→              'Tirez la goupille de sécurité.',
+   292→              'Dirigez la lance vers la base des flammes.',
+   293→              'Appuyez sur la poignée.',
+   294→              'Balayez de gauche à droite.',
+   295→              'N\'essayez d\'éteindre que les petits feux naissants.',
+   296→            ],
+   297→          },
+   298→        ],
+   299→      },
+   300→    ],
+   301→  },
+   302→  {
+   303→    id: 'inondations',
+   304→    icon: Droplets,
+   305→    label: 'Inondations',
+   306→    color: '#06B6D4',
+   307→    bg: '#ECFEFF',
+   308→    articles: [
+   309→      {
+   310→        id: 'io-1',
+   311→        title: 'Préparation avant une inondation',
+   312→        readTime: '4 min',
+   313→        sections: [
+   314→          {
+   315→            title: 'Anticipez les risques d\'inondation pour protéger votre famille et vos biens.',
+   316→            items: [
+   317→              'Identifiez les zones inondables autour de chez vous.',
+   318→              'Préparez un kit d\'urgence (eau, nourriture, lampe, médicaments).',
+   319→              'Stockez les objets de valeur en hauteur.',
+   320→              'Connaître les itinéraires d\'évacuation.',
+   321→              'Gardez les documents importants dans des sacs étanches.',
+   322→            ],
+   323→          },
+   324→        ],
+   325→      },
+   326→      {
+   327→        id: 'io-2',
+   328→        title: 'Pendant une inondation',
+   329→        readTime: '3 min',
+   330→        sections: [
+   331→          {
+   332→            title: 'Mesures de sécurité pendant une inondation.',
+   333→            items: [
+   334→              'Montez aux étages supérieurs ou sur le toit.',
+   335→              'Ne traversez jamais une zone inondée à pied ou en voiture.',
+   336→              'Écoutez la radio pour les informations officielles.',
+   337→              'Coupez l\'électricité et le gaz si possible.',
+   338→              'Ne buvez pas l\'eau du robinet sans confirmation.',
+   339→            ],
+   340→          },
+   341→        ],
+   342→      },
+   343→      {
+   344→        id: 'io-3',
+   345→        title: 'Après une inondation',
+   346→        readTime: '3 min',
+   347→        sections: [
+   348→          {
+   349→            title: 'Retour au domicile après une inondation — précautions essentielles.',
+   350→            items: [
+   351→              'Attendez l\'autorisation des autorités pour rentrer.',
+   352→              'Aérez les pièces avant de séjourner.',
+   353→              'Désinfectez les surfaces touchées par l\'eau.',
+   354→              'Faites vérifier les installations électriques.',
+   355→              'Photographiez les dégâts pour l\'assurance.',
+   356→            ],
+   357→          },
+   358→        ],
+   359→      },
+   360→    ],
+   361→  },
+   362→  {
+   363→    id: 'catastrophes-naturelles',
+   364→    icon: Cloud,
+   365→    label: 'Catastrophes naturelles',
+   366→    color: '#6366F1',
+   367→    bg: '#EEF2FF',
+   368→    articles: [
+   369→      {
+   370→        id: 'cn-1',
+   371→        title: 'Orages et foudre',
+   372→        readTime: '3 min',
+   373→        sections: [
+   374→          {
+   375→            title: 'Protégez-vous pendant les orages violents.',
+   376→            items: [
+   377→              'Restez à l\'intérieur autant que possible.',
+   378→              'Éloignez-vous des arbres et poteaux métalliques.',
+   379→              'N\'utilisez pas le téléphone fixe.',
+   380→              'Débranchez les appareils électriques.',
+   381→              'En plein air, accroupissez-vous, pieds joints.',
+   382→            ],
+   383→          },
+   384→        ],
+   385→      },
+   386→      {
+   387→        id: 'cn-2',
+   388→        title: 'Tremblements de terre',
+   389→        readTime: '4 min',
+   390→        sections: [
+   391→          {
+   392→            title: 'Les gestes de survie en cas de tremblement de terre.',
+   393→            items: [
+   394→              'Abritez-vous sous une table ou un cadre de porte solide.',
+   395→              'Éloignez-vous des fenêtres et murs extérieurs.',
+   396→              'Si vous êtes dehors, éloignez-vous des bâtiments.',
+   397→              'Après la secousse, évacuez calmement le bâtiment.',
+   398→              'Vérifiez les fuites de gaz et les fils électriques.',
+   399→            ],
+   400→          },
+   401→        ],
+   402→      },
+   403→      {
+   404→        id: 'cn-3',
+   405→        title: 'Glissements de terrain',
+   406→        readTime: '3 min',
+   407→        sections: [
+   408→          {
+   409→            title: 'Reconnaître les signes avant-coureurs d\'un glissement de terrain.',
+   410→            items: [
+   411→              'Fissures dans le sol ou les murs.',
+   412→              'Inclinaison soudaine des arbres ou poteaux.',
+   413→              'Écoulement anormal d\'eau.',
+   414→              'Sons de craquement dans le sol.',
+   415→              'Évacuez immédiatement si vous observez ces signes.',
+   416→            ],
+   417→          },
+   418→        ],
+   419→      },
+   420→    ],
+   421→  },
+   422→  {
+   423→    id: 'protection-enfants',
+   424→    icon: Baby,
+   425→    label: 'Protection des enfants',
+   426→    color: '#F97316',
+   427→    bg: '#FFF7ED',
+   428→    articles: [
+   429→      {
+   430→        id: 'pe-1',
+   431→        title: 'Sécurité des enfants à la maison',
+   432→        readTime: '4 min',
+   433→        sections: [
+   434→          {
+   435→            title: 'Protégez vos enfants des dangers domestiques.',
+   436→            items: [
+   437→              'Installez des barrières de sécurité en haut des escaliers.',
+   438→              'Cachez les prises électriques.',
+   439→              'Rangez les produits toxiques en hauteur.',
+   440→              'Ne laissez jamais un enfant seul dans le bain.',
+   441→              'Fixez les meubles lourds aux murs.',
+   442→            ],
+   443→          },
+   444→        ],
+   445→      },
+   446→      {
+   447→        id: 'pe-2',
+   448→        title: 'Prévention des enlèvements',
+   449→        readTime: '3 min',
+   450→        sections: [
+   451→          {
+   452→            title: 'Apprenez à vos enfants les règles de sécurité.',
+   453→            items: [
+   454→              'Ne parlez pas aux inconnus.',
+   455→              'N\'acceptez jamais de cadeau d\'un inconnu.',
+   456→              'Apprenez votre numéro de téléphone par cœur.',
+   457→              'Dites toujours à un adulte où vous allez.',
+   458→              'Criez et courez si quelqu\'un vous attrape.',
+   459→            ],
+   460→          },
+   461→        ],
+   462→      },
+   463→      {
+   464→        id: 'pe-3',
+   465→        title: 'Protection sur Internet',
+   466→        readTime: '4 min',
+   467→        sections: [
+   468→          {
+   469→            title: 'Surveillez et protégez l\'activité en ligne de vos enfants.',
+   470→            items: [
+   471→              'Utilisez le contrôle parental.',
+   472→              'Discutez régulièrement avec eux de leurs activités en ligne.',
+   473→              'Interdisez les rencontres avec des personnes rencontrées en ligne.',
+   474→              'Apprenez-leur à ne pas partager de photos personnelles.',
+   475→              'Signalez tout contenu inapproprié.',
+   476→            ],
+   477→          },
+   478→        ],
+   479→      },
+   480→    ],
+   481→  },
+   482→  {
+   483→    id: 'sante-premiers-secours',
+   484→    icon: Stethoscope,
+   485→    label: 'Santé & Premiers secours',
+   486→    color: '#0B9D5A',
+   487→    bg: '#EDFFF5',
+   488→    articles: [
+   489→      {
+   490→        id: 'ss-1',
+   491→        title: 'Premiers gestes de secours',
+   492→        readTime: '5 min',
+   493→        sections: [
+   494→          {
+   495→            title: 'Les gestes de premiers secours qui sauvent des vies.',
+   496→            items: [
+   497→              'Vérifiez la conscience de la victime.',
+   498→              'Appelez les secours (118 SAMU).',
+   499→              'Pratiquez le massage cardiaque si nécessaire.',
+   500→              'Mettez la victime en position latérale de sécurité si elle respire.',
+   501→              'Ne donnez jamais à boire à une personne inconsciente.',
+   502→            ],
+   503→          },
+   504→        ],
+   505→      },
+   506→      {
+   507→        id: 'ss-2',
+   508→        title: 'Traitement des brûlures',
+   509→        readTime: '3 min',
+   510→        sections: [
+   511→          {
+   512→            title: 'Réagir correctement face à une brûlure.',
+   513→            items: [
+   514→              'Refroidissez la brûlure sous l\'eau tiède pendant 10 minutes.',
+   515→              'Ne percez jamais les cloques.',
+   516→              'Ne mettez pas de glace directement sur la peau.',
+   517→              'Couvrez avec un pansement stérile.',
+   518→              'Consultez un médecin si la brûlure est étendue ou profonde.',
+   519→            ],
+   520→          },
+   521→        ],
+   522→      },
+   523→      {
+   524→        id: 'ss-3',
+   525→        title: 'Gestion des saignements',
+   526→        readTime: '3 min',
+   527→        sections: [
+   528→          {
+   529→            title: 'Comment arrêter un saignement abondant.',
+   530→            items: [
+   531→              'Appuyez fermement sur la plaie avec un tissu propre.',
+   532→              'Maintenez la pression pendant au moins 10 minutes.',
+   533→              'Surélevez le membre blessé si possible.',
+   534→              'Ne retirez pas les objets enfoncés dans la plaie.',
+   535→              'Appelez les secours si le saignement ne s\'arrête pas.',
+   536→            ],
+   537→          },
+   538→        ],
+   539→      },
+   540→    ],
+   541→  },
+   542→  {
+   543→    id: 'escroqueries-fraudes',
+   544→    icon: ShoppingBag,
+   545→    label: 'Escroqueries & Fraudes',
+   546→    color: '#D946EF',
+   547→    bg: '#FDF4FF',
+   548→    articles: [
+   549→      {
+   550→        id: 'ef-1',
+   551→        title: 'Faux agents administratifs',
+   552→        readTime: '4 min',
+   553→        sections: [
+   554→          {
+   555→            title: 'Comment reconnaître un faux agent administratif.',
+   556→            items: [
+   557→              'Exigez toujours une pièce d\'identité officielle.',
+   558→              'Un vrai agent ne vous demandera jamais d\'argent sur place.',
+   559→              'Vérifiez en appelant le service concerné.',
+   560→              'Signalez toute tentative d\'escroquerie.',
+   561→              'Ne signez jamais un document sans le lire intégralement.',
+   562→            ],
+   563→          },
+   564→        ],
+   565→      },
+   566→      {
+   567→        id: 'ef-2',
+   568→        title: 'Arnaques bancaires',
+   569→        readTime: '4 min',
+   570→        sections: [
+   571→          {
+   572→            title: 'Protégez vos comptes bancaires contre les arnaques.',
+   573→            items: [
+   574→              'Ne communiquez jamais votre code PIN.',
+   575→              'Vérifiez vos relevés bancaires régulièrement.',
+   576→              'Signalez immédiatement toute opération suspecte.',
+   577→              'N\'utilisez que des distributeurs situés dans des lieux sûrs.',
+   578→              'Méfiez-vous des appels prétendant venir de votre banque.',
+   579→            ],
+   580→          },
+   581→        ],
+   582→      },
+   583→      {
+   584→        id: 'ef-3',
+   585→        title: 'Fraudes mobiles et SMS',
+   586→        readTime: '3 min',
+   587→        sections: [
+   588→          {
+   589→            title: 'Les fraudes par SMS et applications mobiles sont en augmentation.',
+   590→            items: [
+   591→              'Ne cliquez pas sur les liens reçus par SMS d\'expéditeurs inconnus.',
+   592→              'Vérifiez l\'identité de l\'expéditeur avant de répondre.',
+   593→              'Ne transférez jamais d\'argent à un inconnu.',
+   594→              'Bloquez et signalez les numéros suspects.',
+   595→              'Activez les alertes de transaction sur votre compte mobile.',
+   596→            ],
+   597→          },
+   598→        ],
+   599→      },
+   600→    ],
+   601→  },
+   602→  {
+   603→    id: 'securite-electrique',
+   604→    icon: Zap,
+   605→    label: 'Sécurité électrique',
+   606→    color: '#EAB308',
+   607→    bg: '#FEFCE8',
+   608→    articles: [
+   609→      {
+   610→        id: 'se-1',
+   611→        title: 'Prévenir les électrocutions',
+   612→        readTime: '3 min',
+   613→        sections: [
+   614→          {
+   615→            title: 'L\'électricité est dangereuse — adoptez les bonnes pratiques.',
+   616→            items: [
+   617→              'Ne touchez jamais un appareil électrique les mains mouillées.',
+   618→              'Ne surchargez pas les prises avec des multiprises.',
+   619→              'Faites vérifier vos installations par un électricien qualifié.',
+   620→              'Utilisez des prises avec mise à la terre.',
+   621→              'Coupez le courant avant toute intervention.',
+   622→            ],
+   623→          },
+   624→        ],
+   625→      },
+   626→      {
+   627→        id: 'se-2',
+   628→        title: 'Risques des installations défectueuses',
+   629→        readTime: '3 min',
+   630→        sections: [
+   631→          {
+   632→            title: 'Les installations vétustes sont une cause majeure d\'incendies et d\'électrocutions.',
+   633→            items: [
+   634→              'Remplacez les fils dénudés ou endommagés.',
+   635→              'Ne branchez jamais un appareil sur une prise qui fume ou grésille.',
+   636→              'Faites installer un disjoncteur différentiel.',
+   637→              'Vérifiez les câbles des appareils avant chaque utilisation.',
+   638→              'Éloignez les câbles des sources de chaleur et de l\'eau.',
+   639→            ],
+   640→          },
+   641→        ],
+   642→      },
+   643→    ],
+   644→  },
+   645→  {
+   646→    id: 'disparition-personnes',
+   647→    icon: Users,
+   648→    label: 'Disparition de personnes',
+   649→    color: '#F97316',
+   650→    bg: '#FFF7ED',
+   651→    articles: [
+   652→      {
+   653→        id: 'dp-1',
+   654→        title: 'Que faire lorsqu\'un enfant disparaît ?',
+   655→        readTime: '4 min',
+   656→        sections: [
+   657→          {
+   658→            title: 'La disparition d\'un enfant est une urgence absolue — réagissez immédiatement.',
+   659→            items: [
+   660→              'Alertez immédiatement la police (117).',
+   661→              'Fournissez une photo récente de l\'enfant.',
+   662→              'Décrivez les vêtements portés au moment de la disparition.',
+   663→              'Recherchez dans les environs immédiats.',
+   664→              'Prévenez l\'école et les voisins.',
+   665→              'Partagez l\'alerte sur les réseaux sociaux.',
+   666→            ],
+   667→          },
+   668→        ],
+   669→      },
+   670→      {
+   671→        id: 'dp-2',
+   672→        title: 'Signalement rapide aux autorités',
+   673→        readTime: '3 min',
+   674→        sections: [
+   675→          {
+   676→            title: 'Un signalement rapide augmente les chances de retrouver la personne.',
+   677→            items: [
+   678→              'Il n\'y a pas de délai d\'attente pour signaler une disparition.',
+   679→              'Rendez-vous au commissariat le plus proche.',
+   680→              'Apportez tous les documents d\'identité disponibles.',
+   681→              'Fournissez les coordonnées des proches à contacter.',
+   682→              'Restez joignable en permanence.',
+   683→            ],
+   684→          },
+   685→        ],
+   686→      },
+   687→    ],
+   688→  },
+   689→  {
+   690→    id: 'criminalite-urbaine',
+   691→    icon: Shield,
+   692→    label: 'Criminalité urbaine',
+   693→    color: '#DC2626',
+   694→    bg: '#FEF2F2',
+   695→    articles: [
+   696→      {
+   697→        id: 'cu-1',
+   698→        title: 'Prévention des agressions',
+   699→        readTime: '4 min',
+   700→        sections: [
+   701→          {
+   702→            title: 'Adoptez les bons réflexes pour éviter les agressions en ville.',
+   703→            items: [
+   704→              'Évitez de marcher seul la nuit dans les zones isolées.',
+   705→              'Restez vigilant dans les lieux bondés (marchés, gares).',
+   706→              'Ne montez pas vos objets de valeur en public.',
+   707→              'Prévoyez un moyen de communication chargé.',
+   708→              'Connaissancez les numéros d\'urgence par cœur.',
+   709→            ],
+   710→          },
+   711→        ],
+   712→      },
+   713→      {
+   714→        id: 'cu-2',
+   715→        title: 'Sécurité dans les lieux publics',
+   716→        readTime: '3 min',
+   717→        sections: [
+   718→          {
+   719→            title: 'Protégez-vous dans les espaces publics.',
+   720→            items: [
+   721→              'Gardez votre sac fermé et près du corps.',
+   722→              'Ne laissez pas vos affaires sans surveillance.',
+   723→              'Privilégiez les zones bien éclairées.',
+   724→              'En cas d\'agression, ne résistez pas — votre vie vaut plus que vos biens.',
+   725→              'Signalez immédiatement tout incident à la police.',
+   726→            ],
+   727→          },
+   728→        ],
+   729→      },
+   730→      {
+   731→        id: 'cu-3',
+   732→        title: 'Vol de véhicule',
+   733→        readTime: '3 min',
+   734→        sections: [
+   735→          {
+   736→            title: 'Protégez votre véhicule contre le vol.',
+   737→            items: [
+   738→              'Verrouillez toujours les portes et fermez les fenêtres.',
+   739→              'Ne laissez pas d\'objets de valeur visibles dans l\'habitacle.',
+   740→              'Garez-vous dans des endroits sécurisés et éclairés.',
+   741→              'Utilisez un antivol (cadenas volant, alarme).',
+   742→              'Notez le numéro de châssis et la plaque d\'immatriculation.',
+   743→            ],
+   744→          },
+   745→        ],
+   746→      },
+   747→    ],
+   748→  },
+   749→  {
+   750→    id: 'securite-numerique',
+   751→    icon: Smartphone,
+   752→    label: 'Sécurité numérique avancée',
+   753→    color: '#3B82F6',
+   754→    bg: '#EFF6FF',
+   755→    articles: [
+   756→      {
+   757→        id: 'sn-1',
+   758→        title: 'Protection des données personnelles',
+   759→        readTime: '4 min',
+   760→        sections: [
+   761→          {
+   762→            title: 'Vos données personnelles sont précieuses — protégez-les.',
+   763→            items: [
+   764→              'Lisez les conditions d\'utilisation avant de vous inscrire.',
+   765→              'Limitez les informations partagées en ligne.',
+   766→              'Utilisez un VPN sur les réseaux Wi-Fi publics.',
+   767→              'Supprimez vos comptes inutilisés.',
+   768→              'Demandez la suppression de vos données auprès des entreprises.',
+   769→            ],
+   770→          },
+   771→        ],
+   772→      },
+   773→      {
+   774→        id: 'sn-2',
+   775→        title: 'Sécurité des paiements mobiles',
+   776→        readTime: '4 min',
+   777→        sections: [
+   778→          {
+   779→            title: 'Payer par téléphone est pratique mais comporte des risques.',
+   780→            items: [
+   781→              'Utilisez uniquement des applications officielles.',
+   782→              'Activez les notifications de transaction.',
+   783→              'Ne partagez jamais votre code de vérification.',
+   784→              'Vérifiez le montant avant de confirmer.',
+   785→              'Signalez immédiatement toute transaction non autorisée.',
+   786→            ],
+   787→          },
+   788→        ],
+   789→      },
+   790→      {
+   791→        id: 'sn-3',
+   792→        title: 'Reconnaître le phishing',
+   793→        readTime: '3 min',
+   794→        sections: [
+   795→          {
+   796→            title: 'Le phishing (hameçonnage) est la technique de fraude la plus répandue.',
+   797→            items: [
+   798→              'Vérifiez l\'adresse email de l\'expéditeur.',
+   799→              'Méfiez-vous des messages urgents demandant des informations.',
+   800→              'Ne cliquez pas sur les liens suspects — passez par le site officiel.',
+   801→              'Vérifiez le certificat HTTPS du site (cadenas vert).',
+   802→              'Signalez les tentatives de phishing à la plateforme.',
+   803→            ],
+   804→          },
+   805→        ],
+   806→      },
+   807→    ],
+   808→  },
+   809→  {
+   810→    id: 'risques-sanitaires',
+   811→    icon: Biohazard,
+   812→    label: 'Risques sanitaires',
+   813→    color: '#84CC16',
+   814→    bg: '#F7FEE7',
+   815→    articles: [
+   816→      {
+   817→        id: 'rs-1',
+   818→        title: 'Prévention des épidémies',
+   819→        readTime: '4 min',
+   820→        sections: [
+   821→          {
+   822→            title: 'Adoptez les mesures d\'hygiène pour prévenir la propagation des maladies.',
+   823→            items: [
+   824→              'Lavez-vous les mains régulièrement avec du savon.',
+   825→              'Portez un masque en cas de symptômes respiratoires.',
+   826→              'Faites-vous vacciner selon les recommandations officielles.',
+   827→              'Évitez les contacts rapprochés avec les personnes malades.',
+   828→              'Signalez les symptômes inhabituels aux autorités sanitaires.',
+   829→            ],
+   830→          },
+   831→        ],
+   832→      },
+   833→      {
+   834→        id: 'rs-2',
+   835→        title: 'Hygiène et santé publique',
+   836→        readTime: '3 min',
+   837→        sections: [
+   838→          {
+   839→            title: 'Les gestes essentiels d\'hygiène pour la communauté.',
+   840→            items: [
+   841→              'Utilisez de l\'eau potable ou traitée.',
+   842→              'Conservez les aliments dans des conditions hygiéniques.',
+   843→              'Éliminez correctement les déchets.',
+   844→              'Maintenez votre environnement propre.',
+   845→              'Participez aux campagnes de santé publique.',
+   846→            ],
+   847→          },
+   848→        ],
+   849→      },
+   850→      {
+   851→        id: 'rs-3',
+   852→        title: 'Gestion des intoxications alimentaires',
+   853→        readTime: '3 min',
+   854→        sections: [
+   855→          {
+   856→            title: 'Réagissez rapidement en cas d\'intoxication alimentaire.',
+   857→            items: [
+   858→              'Hydratez-vous abondamment.',
+   859→              'Ne vous faites pas vomir sans avis médical.',
+   860→              'Consultez un médecin si les symptômes persistent.',
+   861→              'Conservez les restes de l\'aliment suspect pour analyse.',
+   862→              'Signalez les cas groupés aux autorités sanitaires.',
+   863→            ],
+   864→          },
+   865→        ],
+   866→      },
+   867→    ],
+   868→  },
+   869→]
+   870→
+   871→export default function ConseilsScreen() {
+   872→  const { navigate, darkMode } = useAppStore()
+   873→  const [searchQuery, setSearchQuery] = useState('')
+   874→
+   875→  const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
+   876→  const cardBg = darkMode ? 'bg-[#0f2555]' : 'bg-white'
+   877→  const textPrimary = darkMode ? 'text-white' : 'text-[#0B2D6B]'
+   878→  const textMuted = darkMode ? 'text-gray-400' : 'text-gray-500'
+   879→
+   880→  const filteredCategories = searchQuery
+   881→    ? conseilCategories.filter(
+   882→        (cat) =>
+   883→          cat.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+   884→          cat.articles.some((a) => a.title.toLowerCase().includes(searchQuery.toLowerCase()))
+   885→      )
+   886→    : conseilCategories
+   887→
+   888→  const allArticles = conseilCategories.flatMap((cat) =>
+   889→    cat.articles.map((a) => ({ ...a, categoryLabel: cat.label, categoryColor: cat.color, categoryBg: cat.bg }))
+   890→  )
+   891→
+   892→  const filteredArticles = searchQuery
+   893→    ? allArticles.filter(
+   894→        (a) =>
+   895→          a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+   896→          a.categoryLabel.toLowerCase().includes(searchQuery.toLowerCase())
+   897→      )
+   898→    : allArticles.slice(0, 8)
+   899→
+   900→  return (
+   901→    <div className={`min-h-screen ${bg} pb-20 transition-colors`}>
+   902→      {/* Header */}
+   903→      <div className="bg-[#0B2D6B] pt-12 pb-6 px-6">
+   904→        <div className="flex items-center gap-3 mb-4">
+   905→          <button onClick={() => navigate('dashboard')} className="text-white">
+   906→            <ChevronLeft className="w-6 h-6" />
+   907→          </button>
+   908→          <h1 className="text-white text-lg font-bold">Conseils de prévention</h1>
+   909→        </div>
+   910→        {/* Search */}
+   911→        <div className="relative">
+   912→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+   913→          <input
+   914→            type="text"
+   915→            placeholder="Rechercher un conseil..."
+   916→            value={searchQuery}
+   917→            onChange={(e) => setSearchQuery(e.target.value)}
+   918→            className="w-full pl-10 pr-4 py-3 bg-white/10 rounded-xl text-sm text-white placeholder-white/50 outline-none focus:bg-white/20"
+   919→          />
+   920→        </div>
+   921→      </div>
+   922→
+   923→      <div className="px-6 pt-4 space-y-5">
+   924→        {/* Emergency numbers banner */}
+   925→        <button
+   926→          onClick={() => navigate('urgence-numeros')}
+   927→          className={`w-full ${cardBg} rounded-xl p-4 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-transform`}
+   928→        >
+   929→          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FF3B30]/10">
+   930→            <Flame className="w-5 h-5 text-[#FF3B30]" />
+   931→          </div>
+   932→          <div className="flex-1 text-left">
+   933→            <p className={`text-sm font-semibold ${textPrimary}`}>Numéros d&apos;urgence</p>
+   934→            <p className={`text-[10px] ${textMuted}`}>Police, SAMU, Pompiers — Accès rapide</p>
+   935→          </div>
+   936→        </button>
+   937→
+   938→        {/* Categories */}
+   939→        <div>
+   940→          <h3 className={`text-sm font-bold ${textPrimary} mb-3`}>Catégories</h3>
+   941→          <div className="grid grid-cols-2 gap-3">
+   942→            {filteredCategories.map(({ icon: Icon, label, color, bg: catBg, articles }) => (
+   943→              <button
+   944→                key={label}
+   945→                onClick={() => {
+   946→                  const cat = conseilCategories.find((c) => c.label === label)
+   947→                  if (cat && cat.articles.length > 0) {
+   948→                    navigate('conseils')
+   949→                    // Navigate to the first article of this category
+   950→                    setTimeout(() => {
+   951→                      const { setSelectedConseilId } = useAppStore.getState()
+   952→                      setSelectedConseilId(cat.articles[0].id)
+   953→                      navigate('conseil-detail')
+   954→                    }, 50)
+   955→                  }
+   956→                }}
+   957→                className={`${cardBg} rounded-xl p-4 shadow-sm text-left active:scale-[0.98] transition-transform`}
+   958→              >
+   959→                <div
+   960→                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-2"
+   961→                  style={{ backgroundColor: catBg }}
+   962→                >
+   963→                  <Icon className="w-5 h-5" style={{ color }} />
+   964→                </div>
+   965→                <p className={`text-xs font-semibold ${textPrimary}`}>{label}</p>
+   966→                <p className={`text-[10px] ${textMuted}`}>{articles.length} articles</p>
+   967→              </button>
+   968→            ))}
+   969→          </div>
+   970→        </div>
+   971→
+   972→        {/* Articles */}
+   973→        <div>
+   974→          <h3 className={`text-sm font-bold ${textPrimary} mb-3`}>
+   975→            {searchQuery ? 'Résultats de recherche' : 'Articles récents'}
+   976→          </h3>
+   977→          <div className="space-y-3">
+   978→            {filteredArticles.map((article) => (
+   979→              <button
+   980→                key={article.id}
+   981→                onClick={() => {
+   982→                  const { setSelectedConseilId } = useAppStore.getState()
+   983→                  setSelectedConseilId(article.id)
+   984→                  navigate('conseil-detail')
+   985→                }}
+   986→                className={`w-full ${cardBg} rounded-xl p-4 shadow-sm text-left active:scale-[0.99] transition-transform`}
+   987→              >
+   988→                <div className="flex items-center gap-2 mb-1">
+   989→                  <span
+   990→                    className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+   991→                    style={{
+   992→                      backgroundColor: `${article.categoryColor}15`,
+   993→                      color: article.categoryColor,
+   994→                    }}
+   995→                  >
+   996→                    {article.categoryLabel}
+   997→                  </span>
+   998→                  <span className={`text-[10px] ${textMuted}`}>{article.readTime}</span>
+   999→                </div>
+  1000→                <h4 className={`text-sm font-semibold ${textPrimary}`}>{article.title}</h4>
+  1001→                {article.sections[0] && (
+  1002→                  <p className={`text-xs ${textMuted} mt-1 line-clamp-2`}>
+  1003→                    {article.sections[0].title}
+  1004→                  </p>
+  1005→                )}
+  1006→              </button>
+  1007→            ))}
+  1008→          </div>
+  1009→        </div>
+  1010→      </div>
+  1011→    </div>
+  1012→  )
+  1013→}
+  1014→
