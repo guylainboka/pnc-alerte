@@ -17,21 +17,31 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: 📦 Install Bun
-        run: npm install -g bun
+          cache: 'npm'
 
       - name: 📦 Install dependencies
-        run: bun install
+        run: npm ci
 
-      - name: 🏗️ Build Next.js
-        run: bun run build
+      - name: 🔍 Lint (non-blocking)
+        run: npm run lint || true
+        continue-on-error: true
+
+      - name: 🏗️ Build Next.js (standalone)
+        run: npm run build
         env:
-          DATABASE_URL: file:./dev.db
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: 📤 Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: PNC-Alerte-web-build
           path: .next/standalone/
+          retention-days: 7
+
+      - name: 📤 Upload static export
+        uses: actions/upload-artifact@v4
+        with:
+          name: PNC-Alerte-web-static
+          path: .next/static/
           retention-days: 7

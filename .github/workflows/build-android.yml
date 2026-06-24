@@ -23,24 +23,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: 📦 Install Bun
-        run: |
-          npm install -g bun
+          cache: 'npm'
 
       - name: 📦 Install dependencies
-        run: bun install
+        run: npm ci
 
-      - name: 🗑️ Remove API routes for static export
-        run: rm -rf src/app/api
-
-      - name: 🏗️ Build Next.js (static export)
-        run: CAPACITOR_BUILD=true bunx next build
+      - name: 🏗️ Build Next.js (static export for Capacitor)
+        run: CAPACITOR_BUILD=true npx next build
         env:
-          DATABASE_URL: file:./dev.db
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: 📱 Sync Capacitor Android
-        run: bunx cap sync android
+        run: npx cap sync android
 
       - name: 🔨 Build Debug APK
         working-directory: android

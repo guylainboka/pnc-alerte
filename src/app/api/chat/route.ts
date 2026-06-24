@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Compatibilité output: export (build Capacitor static)
+export const dynamic = "force-static";
+export const revalidate = false;
+
 export async function POST(req: NextRequest) {
   try {
     const { message } = await req.json()
