@@ -9,7 +9,7 @@ import sys
 import time
 
 # --- Config ---
-TOKEN = "REDACTED_TOKEN"
+TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
 REF = "ubtktcyucgkcnhuqizba"
 
 def run_sql(sql: str, label: str):

@@ -1,5 +1,6 @@
 'use client'
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export type Screen =
   | 'splash'
@@ -96,7 +97,9 @@ interface AppState {
   setLocation: (lat: number, lng: number) => void
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   currentScreen: 'splash',
   screenHistory: [],
   isAuthenticated: false,
@@ -121,63 +124,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   carteElecteurValidated: false,
   carteElecteurNumero: '',
   // User alerts
-  userAlerts: [
-    {
-      id: 'UA-001',
-      type: 'signalement',
-      title: 'Vol à la tire — Marché Central',
-      status: 'en-cours',
-      reference: 'SIG-2026-A3K9F',
-      date: '2026-06-10',
-      description: 'Signalement de vol à la tire au Marché Central de Kinshasa',
-      updates: [
-        { date: '2026-06-10 14:30', status: 'Reçu', message: 'Signalement enregistré par le centre opérationnel' },
-        { date: '2026-06-11 09:00', status: 'En cours', message: 'Transmis au commissariat de la Gombe pour enquête' },
-        { date: '2026-06-12 16:00', status: 'En cours', message: 'Enquête en cours — Suspect identifié' },
-      ],
-    },
-    {
-      id: 'UA-002',
-      type: 'plainte',
-      title: 'Plainte pour escroquerie',
-      status: 'en-attente',
-      reference: 'PLT-2026-B7M2X',
-      date: '2026-06-12',
-      description: 'Plainte déposée pour escroquerie par faux agent administratif',
-      updates: [
-        { date: '2026-06-12 10:00', status: 'Reçu', message: 'Plainte enregistrée au commissariat central' },
-        { date: '2026-06-12 10:05', status: 'En attente', message: 'En attente de validation par un officier de police judiciaire' },
-      ],
-    },
-    {
-      id: 'UA-003',
-      type: 'sos',
-      title: 'Alerte SOS — 10 juin 2026',
-      status: 'cloture',
-      reference: 'SOS-2026-C1P5R',
-      date: '2026-06-10',
-      description: 'Alerte d\'urgence déclenchée à 22h15, position GPS transmise',
-      updates: [
-        { date: '2026-06-10 22:15', status: 'Reçu', message: 'Alerte SOS reçue — Position GPS capturée' },
-        { date: '2026-06-10 22:18', status: 'En cours', message: 'Patrouille dépêchée sur les lieux' },
-        { date: '2026-06-10 22:35', status: 'Clôturé', message: 'Patrouille arrivée sur les lieux — Situation sécurisée' },
-      ],
-    },
-    {
-      id: 'UA-004',
-      type: 'alerte-citoyenne',
-      title: 'Disparition de mon frère — Kinsuka',
-      status: 'traite',
-      reference: 'ACZ-2026-D4N8L',
-      date: '2026-06-08',
-      description: 'Alerte citoyenne de disparition dans le quartier Kinsuka',
-      updates: [
-        { date: '2026-06-08 08:00', status: 'Reçu', message: 'Alerte citoyenne soumise pour validation' },
-        { date: '2026-06-08 12:00', status: 'Publiée', message: 'Alerte validée et publiée' },
-        { date: '2026-06-09 15:00', status: 'Traitée', message: 'Personne retrouvée — Alerte résolue' },
-      ],
-    },
-  ],
+  userAlerts: [],
   // Geolocation
   userLatitude: null,
   userLongitude: null,
@@ -237,4 +184,40 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     })),
   setLocation: (lat, lng) => set({ userLatitude: lat, userLongitude: lng }),
-}))
+    }),
+    {
+      name: 'pnc-alerte-store',
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') {
+          return window.localStorage
+        }
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        }
+      }),
+      // Ne pas persister l'écran courant (toujours démarrer sur splash pour vérifier la session)
+      // Ni la géoloc (toujours la réacquérir)
+      partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
+        userName: state.userName,
+        userEmail: state.userEmail,
+        userPhone: state.userPhone,
+        userProvince: state.userProvince,
+        userCommune: state.userCommune,
+        darkMode: state.darkMode,
+        profileImage: state.profileImage,
+        language: state.language,
+        geoRadius: state.geoRadius,
+        biometricEnabled: state.biometricEnabled,
+        offlineMode: state.offlineMode,
+        pushNotifications: state.pushNotifications,
+        geoNotifications: state.geoNotifications,
+        soundEnabled: state.soundEnabled,
+        carteElecteurValidated: state.carteElecteurValidated,
+        carteElecteurNumero: state.carteElecteurNumero,
+      }),
+    }
+  )
+)

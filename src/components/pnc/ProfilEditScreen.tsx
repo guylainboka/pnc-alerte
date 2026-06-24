@@ -1,8 +1,10 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
+import { uploadPhoto } from '@/lib/signalements-service'
+import { updateProfile as updateProfileAuth } from '@/lib/auth-service'
 import ScreenHeader from './ScreenHeader'
-import { Camera, User, Phone, Mail, MapPin, Check } from 'lucide-react'
+import { Camera, User, Phone, Mail, MapPin, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 const provinces = ['Kinshasa', 'Kongo-Central', 'Kwango', 'Kwilu', 'Mai-Ndombe', 'Kasai', 'Kasai-Central', 'Kasai-Oriental', 'Sud-Kivu', 'Nord-Kivu', 'Ituri', 'Haut-Katanga', 'Equateur']
@@ -19,20 +21,58 @@ export default function ProfilEditScreen() {
   const [province, setProvince] = useState(userProvince)
   const [commune, setCommune] = useState(userCommune)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [photoFile, setPhotoFile] = useState<Blob | null>(null)
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setPhotoFile(file)
       const reader = new FileReader()
       reader.onload = (ev) => setProfileImage(ev.target?.result as string)
       reader.readAsDataURL(file)
     }
   }
 
-  const handleSave = () => {
-    updateProfile({ userName: name, userEmail: email, userPhone: phone, userProvince: province, userCommune: commune })
-    setSaved(true)
-    setTimeout(() => navigate('profil'), 1200)
+  const handleSave = async () => {
+    setError('')
+    setSaving(true)
+    try {
+      // 1) Upload photo si changée
+      let photoUrl: string | undefined
+      if (photoFile) {
+        const { url, error: upErr } = await uploadPhoto(photoFile, `profile-${Date.now()}.jpg`)
+        if (!upErr && url) photoUrl = url
+      }
+
+      // 2) Mettre à jour le profil Supabase
+      const { error: supErr } = await updateProfileAuth({
+        fullName: name,
+        phone,
+      })
+
+      if (supErr) {
+        setError(supErr)
+        setSaving(false)
+        return
+      }
+
+      // 3) Mettre à jour Zustand localement
+      updateProfile({
+        userName: name,
+        userEmail: email,
+        userPhone: phone,
+        userProvince: province,
+        userCommune: commune,
+      })
+
+      setSaved(true)
+      setTimeout(() => navigate('profil'), 1200)
+    } catch (e) {
+      setError('Erreur lors de la sauvegarde')
+      setSaving(false)
+    }
   }
 
   const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-[#F5F6FA]'
@@ -129,10 +169,17 @@ export default function ProfilEditScreen() {
             </div>
           </div>
 
-          <button onClick={handleSave}
-            className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25">
-            Enregistrer les modifications
+          <button onClick={handleSave} disabled={saving}
+            className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-60 flex items-center justify-center gap-2">
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
           </button>
+          {error && (
+            <div className="bg-[#FF3B30]/10 rounded-xl p-3 border border-[#FF3B30]/20 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-[#FF3B30] mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-[#FF3B30]">{error}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

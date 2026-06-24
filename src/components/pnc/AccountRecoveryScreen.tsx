@@ -31,8 +31,8 @@ export default function AccountRecoveryScreen() {
     try {
       if (method === 'email' && email) {
         const result = await resetPassword(email)
-        if (!result.success) {
-          setError(result.error || 'Erreur')
+        if (result.error) {
+          setError(result.error)
           setLoading(false)
           return
         }

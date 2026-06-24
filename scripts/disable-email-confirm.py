@@ -4,7 +4,7 @@ import json
 import urllib.request
 import urllib.error
 
-TOKEN = 'REDACTED_TOKEN'
+TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
 REF = 'ubtktcyucgkcnhuqizba'
 
 # Désactiver la confirmation email

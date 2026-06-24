@@ -1,20 +1,43 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { useEffect } from 'react'
+import { getCurrentUser } from '@/lib/auth-service'
+import { useEffect, useState } from 'react'
 
 export default function SplashScreen() {
   const { navigate, isAuthenticated } = useAppStore()
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      // 1) Vérifier d'abord Zustand (état déjà connu)
       if (isAuthenticated) {
-        navigate('dashboard')
-      } else {
+        if (!cancelled) navigate('dashboard')
+        return
+      }
+      // 2) Vérifier la session Supabase (si l'utilisateur a déjà connecté son compte)
+      try {
+        const user = await getCurrentUser()
+        if (!cancelled && user) {
+          // Restaurer l'état Zustand depuis le profil Supabase
+          useAppStore.getState().login(
+            user.fullName || 'Citoyen',
+            user.email,
+            user.phone || ''
+          )
+          navigate('dashboard')
+          return
+        }
+      } catch (e) {
+        // Silencieux — fallback vers onboarding
+      }
+      if (!cancelled) {
+        setChecking(false)
         navigate('onboarding')
       }
-    }, 2500)
-    return () => clearTimeout(timer)
+    }, 2000)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [navigate, isAuthenticated])
 
   return (
@@ -32,6 +55,9 @@ export default function SplashScreen() {
           <p className="text-sm text-blue-200 mt-2 max-w-[250px]">
             Police Nationale Congolaise — Sécurité au bout des doigts
           </p>
+          {checking && (
+            <p className="text-[10px] text-blue-300/70 mt-2">Vérification de la session…</p>
+          )}
         </div>
         <div className="mt-8">
           <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />

@@ -1,25 +1,33 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { ChevronLeft, ChevronRight, Upload, FileText, AlertTriangle, Camera, X, Share2 } from 'lucide-react'
+import { createPlainte, uploadPhoto } from '@/lib/signalements-service'
+import { ChevronLeft, ChevronRight, Upload, FileText, AlertTriangle, Camera, X, Share2, AlertCircle, Loader2 } from 'lucide-react'
 import { useState, useRef } from 'react'
 
+// Types alignés avec la contrainte SQL : type_plainte in ('vol', 'escroquerie', 'agression', 'harcèlement', 'violence', 'autre')
 const complaintTypes = [
-  'Vol simple', 'Escroquerie ou Abus de confiance', 'Vandalisme',
-  'Menaces, Harcèlement ou Cybercriminalité', 'Violence ou Agression', 'Perte de documents officiels',
+  { label: 'Vol simple', value: 'vol' },
+  { label: 'Escroquerie ou Abus de confiance', value: 'escroquerie' },
+  { label: 'Vandalisme', value: 'autre' },
+  { label: 'Menaces, Harcèlement ou Cybercriminalité', value: 'harcèlement' },
+  { label: 'Violence ou Agression', value: 'violence' },
+  { label: 'Perte de documents officiels', value: 'autre' },
 ]
 
 export default function PlainteScreen() {
-  const { navigate, darkMode, addUserAlert } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({
-    type: '', dateFaits: '', heureFaits: '', lieuFaits: '', description: '',
+    typeLabel: '', type: '', dateFaits: '', heureFaits: '', lieuFaits: '', description: '',
     suspectStatus: 'inconnu', suspectNom: '', suspectDescription: '',
     engagement: false,
   })
   const [submitted, setSubmitted] = useState(false)
   const [submittedRef, setSubmittedRef] = useState('')
   const [attachments, setAttachments] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const updateForm = (field: string, value: string | boolean) =>
@@ -42,23 +50,55 @@ export default function PlainteScreen() {
     setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = () => {
-    const ref = `PLT-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-    setSubmittedRef(ref)
-    addUserAlert({
-      id: `UA-${Date.now()}`,
-      type: 'plainte',
-      title: `Plainte: ${form.type || 'Non défini'}`,
-      status: 'en-attente',
-      reference: ref,
-      date: new Date().toISOString().split('T')[0],
-      description: form.description || form.type,
-      updates: [
-        { date: new Date().toISOString(), status: 'Reçu', message: 'Plainte enregistrée au commissariat' },
-        { date: new Date().toISOString(), status: 'En attente', message: 'En attente de validation par un officier de police judiciaire' },
-      ],
-    })
-    setSubmitted(true)
+  const handleSubmit = async () => {
+    if (!form.engagement) {
+      setError('Vous devez certifier sur l\'honneur l\'exactitude des informations')
+      return
+    }
+    if (!form.type || !form.description.trim() || form.description.length < 50) {
+      setError('Type et description (min 50 caractères) sont obligatoires')
+      setStep(2)
+      return
+    }
+    setError('')
+    setSubmitting(true)
+
+    try {
+      // Upload de la première photo si présente
+      let firstPhotoUrl: string | undefined
+      const firstPhoto = attachments.find(a => a.startsWith('data:image'))
+      if (firstPhoto) {
+        const response = await fetch(firstPhoto)
+        const blob = await response.blob()
+        const { url } = await uploadPhoto(blob)
+        if (url) firstPhotoUrl = url
+      }
+
+      const { plainte, error: createErr } = await createPlainte({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typePlainte: form.type as any,
+        description: form.description.trim(),
+        suspectInfo: form.suspectStatus === 'identifie'
+          ? `Nom: ${form.suspectNom}. ${form.suspectDescription}`.trim()
+          : 'Plainte contre X',
+        lieuIncident: form.lieuFaits || undefined,
+        dateIncident: form.dateFaits || undefined,
+        piecesJointes: firstPhotoUrl ? [firstPhotoUrl] : undefined,
+      })
+
+      if (createErr || !plainte) {
+        setError(createErr || 'Erreur lors de la création de la plainte')
+        setSubmitting(false)
+        return
+      }
+
+      setSubmittedRef(plainte.reference)
+      setSubmitted(true)
+    } catch (e) {
+      setError('Une erreur est survenue. Veuillez réessayer.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const stepLabels = ['Type', 'Faits', 'Suspect', 'Preuves', 'Validation']
@@ -140,19 +180,19 @@ export default function PlainteScreen() {
           <div>
             <h3 className={`text-sm font-bold ${textPrimary} mb-3`}>Type de plainte</h3>
             <div className="space-y-2">
-              {complaintTypes.map((type) => (
+              {complaintTypes.map((t) => (
                 <button
-                  key={type}
-                  onClick={() => updateForm('type', type)}
+                  key={t.value + t.label}
+                  onClick={() => { updateForm('type', t.value); updateForm('typeLabel', t.label) }}
                   className={`w-full p-3 rounded-xl text-left text-sm transition-all ${
-                    form.type === type ? 'bg-[#1E5EFF] text-white shadow-md' : `${cardBg} ${darkMode ? 'text-gray-300' : 'text-gray-600'} shadow-sm`
+                    form.typeLabel === t.label ? 'bg-[#1E5EFF] text-white shadow-md' : `${cardBg} ${darkMode ? 'text-gray-300' : 'text-gray-600'} shadow-sm`
                   }`}
                 >
-                  {type}
+                  {t.label}
                 </button>
               ))}
             </div>
-            {form.type === 'Violence ou Agression' && (
+            {form.typeLabel === 'Violence ou Agression' && (
               <button
                 onClick={() => navigate('sos')}
                 className="mt-3 w-full bg-[#FF3B30]/10 rounded-xl p-3 border border-[#FF3B30]/20 flex items-center gap-2 active:scale-[0.98] transition-transform"
@@ -301,7 +341,7 @@ export default function PlainteScreen() {
           <div className="space-y-4">
             <h3 className={`text-sm font-bold ${textPrimary} mb-2`}>Récapitulatif</h3>
             <div className={`${cardBg} rounded-xl p-4 space-y-3 shadow-sm transition-colors`}>
-              <div className="flex justify-between"><span className={`text-xs ${textMuted}`}>Type</span><span className={`text-xs font-medium ${textPrimary}`}>{form.type || 'Non défini'}</span></div>
+              <div className="flex justify-between"><span className={`text-xs ${textMuted}`}>Type</span><span className={`text-xs font-medium ${textPrimary}`}>{form.typeLabel || 'Non défini'}</span></div>
               <div className="flex justify-between"><span className={`text-xs ${textMuted}`}>Date</span><span className={`text-xs font-medium ${textPrimary}`}>{form.dateFaits || 'Non définie'}</span></div>
               <div className="flex justify-between"><span className={`text-xs ${textMuted}`}>Lieu</span><span className={`text-xs font-medium ${textPrimary}`}>{form.lieuFaits || 'Non défini'}</span></div>
               <div className="flex justify-between"><span className={`text-xs ${textMuted}`}>Suspect</span><span className={`text-xs font-medium ${textPrimary}`}>{form.suspectStatus === 'inconnu' ? 'Plainte contre X' : form.suspectNom}</span></div>
@@ -325,15 +365,23 @@ export default function PlainteScreen() {
 
       {/* Bottom button */}
       <div className="px-6 pt-4">
+        {error && step === 5 && (
+          <div className="mb-3 bg-[#FF3B30]/10 rounded-xl p-3 border border-[#FF3B30]/20 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-[#FF3B30] mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-[#FF3B30]">{error}</p>
+          </div>
+        )}
         <button
           onClick={() => {
+            setError('')
             if (step < 5) setStep(step + 1)
             else handleSubmit()
           }}
-          disabled={step === 1 && !form.type}
-          className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-40"
+          disabled={(step === 1 && !form.type) || submitting}
+          className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-40 flex items-center justify-center gap-2"
         >
-          {step < 5 ? 'Continuer' : 'Soumettre la plainte'}
+          {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+          {submitting ? 'Envoi en cours…' : step < 5 ? 'Continuer' : 'Soumettre la plainte'}
         </button>
       </div>
     </div>

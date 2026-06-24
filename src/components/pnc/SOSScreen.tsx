@@ -1,13 +1,17 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { Phone, MapPin, Clock, User, ChevronLeft, Share2, Navigation } from 'lucide-react'
+import { createSOSCall, subscribeToSOSUpdates, type SOSCall } from '@/lib/sos-service'
+import { Phone, MapPin, Clock, User, ChevronLeft, Share2, Navigation, AlertCircle } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
 export default function SOSScreen() {
   const { navigate, userName, setLocation, userLatitude, userLongitude } = useAppStore()
   const [activated, setActivated] = useState(false)
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [sosCall, setSosCall] = useState<SOSCall | null>(null)
+  const [sosStatus, setSosStatus] = useState<SOSCall['status'] | null>(null)
 
   const getUserLocation = useCallback(() => {
     if (!navigator.geolocation) return
@@ -24,14 +28,43 @@ export default function SOSScreen() {
     getUserLocation()
   }, [getUserLocation])
 
-  const handleSOS = () => {
-    if (activated) return
+  // Souscription Realtime au SOS une fois créé
+  useEffect(() => {
+    if (!sosCall?.id) return
+    const unsub = subscribeToSOSUpdates(sosCall.id, (status) => {
+      setSosStatus(status)
+    })
+    return unsub
+  }, [sosCall])
+
+  const handleSOS = async () => {
+    if (activated || sending) return
+    setError('')
     getUserLocation()
     setSending(true)
-    setTimeout(() => {
-      setSending(false)
+
+    // Petit délai pour récupérer la géoloc
+    await new Promise(r => setTimeout(r, 800))
+
+    const { sosCall: call, error: err } = await createSOSCall({
+      latitude: userLatitude || undefined,
+      longitude: userLongitude || undefined,
+      locationText: userLatitude && userLongitude
+        ? `Position: ${userLatitude.toFixed(5)}, ${userLongitude.toFixed(5)}`
+        : 'Position inconnue',
+    })
+
+    setSending(false)
+
+    if (err) {
+      setError(err)
+      return
+    }
+    if (call) {
+      setSosCall(call)
+      setSosStatus(call.status)
       setActivated(true)
-    }, 2000)
+    }
   }
 
   const handleCall = (number: string) => {
@@ -41,7 +74,8 @@ export default function SOSScreen() {
   const handleShareLocation = async () => {
     const lat = userLatitude || -4.4419
     const lng = userLongitude || 15.2663
-    const text = `🚨 URGENCE — ${userName} a déclenché une alerte SOS.\nPosition GPS: https://www.google.com/maps?q=${lat},${lng}\nHeure: ${new Date().toLocaleTimeString('fr-FR')}`
+    const ref = sosCall?.reference || 'SOS-PNC'
+    const text = `🚨 URGENCE — ${userName} a déclenché une alerte SOS (${ref}).\nPosition GPS: https://www.google.com/maps?q=${lat},${lng}\nHeure: ${new Date().toLocaleTimeString('fr-FR')}`
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Alerte SOS PNC', text })
@@ -51,6 +85,14 @@ export default function SOSScreen() {
         await navigator.clipboard.writeText(text)
       }
     }
+  }
+
+  const statusLabels: Record<SOSCall['status'], string> = {
+    'actif': 'SOS reçu — en attente de prise en charge',
+    'en-route': 'Un agent est en route vers vous',
+    'sur-place': 'Un agent est sur place',
+    'cloture': 'Intervention clôturée',
+    'annule': 'SOS annulé',
   }
 
   const emergencyNumbers = [
@@ -89,7 +131,6 @@ export default function SOSScreen() {
                   <span className="text-white text-4xl font-black tracking-wider">SOS</span>
                 )}
               </div>
-              {/* Pulse rings */}
               {!sending && (
                 <>
                   <div className="absolute inset-0 w-48 h-48 rounded-full bg-[#FF3B30]/20 animate-ping" style={{ animationDuration: '2s' }} />
@@ -97,6 +138,13 @@ export default function SOSScreen() {
                 </>
               )}
             </button>
+
+            {error && (
+              <div className="mt-6 bg-[#FF3B30]/20 border border-[#FF3B30]/30 rounded-xl p-3 max-w-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-200 mt-0.5 flex-shrink-0" />
+                <p className="text-red-100 text-xs">{error}</p>
+              </div>
+            )}
 
             <p className="text-white/80 text-sm mt-8 text-center">
               Appuyez sur le bouton pour envoyer une alerte d&apos;urgence
@@ -123,9 +171,17 @@ export default function SOSScreen() {
             </div>
 
             <h2 className="text-white text-xl font-bold mb-2">Alerte envoyée !</h2>
-            <p className="text-white/70 text-sm text-center max-w-[280px] mb-6">
+            <p className="text-white/70 text-sm text-center max-w-[280px] mb-4">
               Votre position et vos informations ont été transmises au centre opérationnel de la PNC. L&apos;aide est en route.
             </p>
+
+            {sosStatus && (
+              <div className="mb-4 bg-[#1E5EFF]/30 border border-[#1E5EFF]/40 rounded-xl p-3 max-w-xs text-center">
+                <p className="text-white text-sm font-semibold">
+                  {statusLabels[sosStatus]}
+                </p>
+              </div>
+            )}
 
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 w-full mb-4">
               <div className="flex items-center gap-3 mb-3">
@@ -142,6 +198,12 @@ export default function SOSScreen() {
                 <User className="w-4 h-4 text-[#5b8cff]" />
                 <span className="text-white/80 text-xs">Identité : {userName}</span>
               </div>
+              {sosCall?.reference && (
+                <div className="flex items-center gap-3 mb-3">
+                  <Navigation className="w-4 h-4 text-[#5b8cff]" />
+                  <span className="text-white/80 text-xs font-mono">Réf : {sosCall.reference}</span>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                 <Navigation className="w-4 h-4 text-[#5b8cff]" />
                 <span className="text-white/80 text-xs">
@@ -185,7 +247,7 @@ export default function SOSScreen() {
             </div>
 
             <button
-              onClick={() => setActivated(false)}
+              onClick={() => { setActivated(false); setSosCall(null); setSosStatus(null) }}
               className="mt-6 text-white/50 text-xs underline"
             >
               Annuler l&apos;alerte

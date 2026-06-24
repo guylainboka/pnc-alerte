@@ -1,14 +1,12 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { useState } from 'react'
-import { Eye, EyeOff, Fingerprint, ShieldCheck, Camera, CreditCard, ImagePlus } from 'lucide-react'
-import { nativeCamera } from '@/lib/native-services'
-import { requestPermission } from '@/lib/permissions'
-import { isNative } from '@/lib/capacitor'
+import { signIn } from '@/lib/auth-service'
+import { useState, useRef } from 'react'
+import { Eye, EyeOff, Fingerprint, ShieldCheck, Camera, CreditCard, ChevronLeft, AlertCircle } from 'lucide-react'
 
 export default function LoginScreen() {
-  const { navigate, login, darkMode, setCarteElecteur } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
   const [mode, setMode] = useState<'login' | 'electeur'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,53 +16,39 @@ export default function LoginScreen() {
   const [carteImage, setCarteImage] = useState<string | null>(null)
   const [carteValidating, setCarteValidating] = useState(false)
   const [carteError, setCarteError] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setLoginError('')
+    if (!email.trim() || !password) {
+      setLoginError('Veuillez saisir votre email et mot de passe')
+      return
+    }
     setLoading(true)
-    setTimeout(() => {
-      login('Jean Mukendi', email || 'jean.mukendi@email.com', '+243 812 345 678')
-      setLoading(false)
-    }, 1200)
-  }
-
-  // === PRISE DE PHOTO NATIVE ANDROID ===
-  const takeCartePhoto = async () => {
-    try {
-      setCarteError('')
-
-      // Demander la permission caméra d'abord
-      const perm = await requestPermission('camera')
-      if (!perm.granted) {
-        setCarteError('Permission caméra refusée. Veuillez autoriser l\'accès à la caméra dans les paramètres.')
-        return
-      }
-
-      // Utiliser la caméra native Android
-      const photo = await nativeCamera.scanDocument()
-      if (typeof photo === 'object' && 'dataUrl' in photo) {
-        setCarteImage(photo.dataUrl)
-      } else {
-        setCarteImage(photo as string)
-      }
-    } catch (err) {
-      console.error('Erreur caméra:', err)
-      setCarteError('Impossible d\'accéder à la caméra. Vérifiez les permissions.')
+    const { user, error } = await signIn(email.trim(), password)
+    setLoading(false)
+    if (error) {
+      setLoginError(error)
+      return
+    }
+    if (user) {
+      navigate('dashboard')
     }
   }
 
-  // === CHOIX DEPUIS LA GALERIE ANDROID ===
-  const pickCarteImage = async () => {
-    try {
+  const handleCarteImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
       setCarteError('')
-      const image = await nativeCamera.pickImage()
-      setCarteImage(image)
-    } catch (err) {
-      console.error('Erreur galerie:', err)
-      setCarteError('Impossible d\'accéder à la galerie.')
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        setCarteImage(ev.target?.result as string)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
-  // === VALIDATION CARTE ÉLECTEUR ===
   const handleElecteurLogin = () => {
     if (!carteNumero.trim()) {
       setCarteError('Veuillez entrer le numéro de votre carte d\'électeur')
@@ -74,22 +58,7 @@ export default function LoginScreen() {
       setCarteError('Veuillez photographier votre carte d\'électeur')
       return
     }
-
-    setCarteValidating(true)
-
-    // Validation de la carte d'électeur
-    // En production : envoi au serveur pour vérification OCR
-    setTimeout(() => {
-      const isValid = carteNumero.length >= 10
-      if (isValid) {
-        setCarteValidating(false)
-        setCarteElecteur(true, carteNumero)
-        login('Jean Mukendi', 'jean.mukendi@email.com', '+243 812 345 678')
-      } else {
-        setCarteValidating(false)
-        setCarteError('Carte d\'électeur non reconnue. Vérifiez le numéro et la clarté de l\'image.')
-      }
-    }, 2000)
+    setCarteError('La connexion par carte d\'électeur sera disponible prochainement. Merci d\'utiliser la connexion par email.')
   }
 
   const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-white'
@@ -102,8 +71,13 @@ export default function LoginScreen() {
     <div className={`min-h-screen ${bg} flex flex-col transition-colors`}>
       {/* Header with background image */}
       <div className="bg-[#0B2D6B] pt-14 pb-20 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-15" style={{ backgroundImage: 'url(/maquette.png)' }} />
+        {/* Background image overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-15"
+          style={{ backgroundImage: 'url(/maquette.png)' }}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B2D6B]/60 to-[#0B2D6B]" />
+        {/* Decorative circles */}
         <div className="absolute top-[-40px] right-[-40px] w-32 h-32 rounded-full bg-[#1E5EFF]/30" />
         <div className="absolute bottom-[-20px] left-[-20px] w-20 h-20 rounded-full bg-white/5" />
         <div className="relative z-10 flex items-center gap-3">
@@ -170,17 +144,30 @@ export default function LoginScreen() {
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 ${inputBg} rounded-xl text-sm focus:border-[#1E5EFF] outline-none transition-all pr-12 border ${darkMode ? 'text-white placeholder-gray-500' : ''}`}
                   />
-                  <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <button
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex justify-end mb-6">
-                <button onClick={() => navigate('forgot-password')} className="text-xs text-[#1E5EFF] font-medium">
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => navigate('forgot-password')}
+                  className="text-xs text-[#1E5EFF] font-medium"
+                >
                   Mot de passe oublié ?
                 </button>
               </div>
+
+              {loginError && (
+                <div className="mb-4 bg-[#FF3B30]/10 rounded-xl p-3 border border-[#FF3B30]/20 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-[#FF3B30] mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-[#FF3B30]">{loginError}</p>
+                </div>
+              )}
 
               <button
                 onClick={handleLogin}
@@ -189,10 +176,12 @@ export default function LoginScreen() {
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-                ) : 'Se connecter'}
+                ) : (
+                  'Se connecter'
+                )}
               </button>
 
-              <button className="w-full mt-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300 active:scale-[0.98] transition-transform">
+              <button className="w-full mt-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <Fingerprint className="w-5 h-5 text-[#1E5EFF]" /> Connexion biométrique
               </button>
             </>
@@ -203,49 +192,31 @@ export default function LoginScreen() {
                 Validez votre identité avec votre carte d&apos;électeur pour accéder à tous les services PNC.
               </p>
 
-              {/* === PHOTO NATIVE ANDROID === */}
+              {/* Carte image upload */}
               <div className="mb-4">
                 <label className={`text-xs font-medium ${textMuted} mb-2 block`}>
                   Photographiez votre carte d&apos;électeur
                 </label>
-
+                <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleCarteImageChange} className="hidden" />
                 {carteImage ? (
                   <div className="relative">
                     <img src={carteImage} alt="Carte électeur" className="w-full h-40 object-cover rounded-xl border-2 border-[#1E5EFF]" />
-                    <div className="absolute bottom-2 right-2 flex gap-1.5">
-                      <button
-                        onClick={takeCartePhoto}
-                        className="w-8 h-8 bg-[#1E5EFF] rounded-lg flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                      >
-                        <Camera className="w-4 h-4 text-white" />
-                      </button>
-                      <button
-                        onClick={pickCarteImage}
-                        className="w-8 h-8 bg-[#0B2D6B] rounded-lg flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-                      >
-                        <ImagePlus className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-2 right-2 w-8 h-8 bg-[#1E5EFF] rounded-lg flex items-center justify-center shadow-lg"
+                    >
+                      <Camera className="w-4 h-4 text-white" />
+                    </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={takeCartePhoto}
-                      className="flex-1 h-36 rounded-xl border-2 border-dashed border-[#1E5EFF]/40 flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-transform bg-[#1E5EFF]/5"
-                    >
-                      <Camera className="w-8 h-8 text-[#1E5EFF]" />
-                      <span className={`text-sm font-medium text-[#1E5EFF]`}>Prendre une photo</span>
-                      <span className={`text-[10px] ${textMuted}`}>Caméra Android</span>
-                    </button>
-                    <button
-                      onClick={pickCarteImage}
-                      className="flex-1 h-36 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                      <ImagePlus className="w-8 h-8 text-gray-400" />
-                      <span className={`text-sm ${textMuted}`}>Galerie</span>
-                      <span className={`text-[10px] ${textMuted}`}>Choisir une image</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-40 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  >
+                    <Camera className="w-8 h-8 text-gray-400" />
+                    <span className={`text-sm ${textMuted}`}>Prendre une photo / Galerie</span>
+                    <span className={`text-[10px] ${textMuted}`}>L&apos;image doit être claire et lisible</span>
+                  </button>
                 )}
               </div>
 

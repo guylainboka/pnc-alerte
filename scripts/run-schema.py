@@ -7,7 +7,7 @@ import urllib.request
 import urllib.error
 import sys
 
-TOKEN = 'REDACTED_TOKEN'
+TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
 REF = 'ubtktcyucgkcnhuqizba'
 
 # Lire le schéma SQL

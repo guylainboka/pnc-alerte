@@ -260,6 +260,35 @@ export async function getOfficialAlerts(activeOnly = true): Promise<OfficialAler
   }))
 }
 
+/**
+ * Récupère une alerte officielle par son ID (sans filtre active).
+ */
+export async function getOfficialAlertById(id: string): Promise<OfficialAlert | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('alertes_officielles')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) return null
+
+  return {
+    id: data.id,
+    titre: data.titre,
+    type: data.type,
+    severity: data.severity,
+    description: data.description,
+    location: data.location,
+    source: data.source,
+    reference: data.reference,
+    active: data.active,
+    createdAt: data.created_at,
+  }
+}
+
 // ============================================================
 // REALTIME HOOKS
 // ============================================================

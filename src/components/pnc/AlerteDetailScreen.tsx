@@ -3,7 +3,7 @@
 import { useAppStore } from '@/lib/store'
 import { ChevronLeft, Shield, MapPin, Clock, Share2, Eye, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { getOfficialAlerts, formatRelativeTime, type OfficialAlert } from '@/lib/data-service'
+import { getOfficialAlertById, formatRelativeTime, type OfficialAlert } from '@/lib/data-service'
 
 export default function AlerteDetailScreen() {
   const { navigate, darkMode, selectedAlertId } = useAppStore()
@@ -18,10 +18,13 @@ export default function AlerteDetailScreen() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    getOfficialAlerts(false).then((all) => {
+    if (!selectedAlertId) {
+      setLoading(false)
+      return
+    }
+    getOfficialAlertById(selectedAlertId).then((found) => {
       if (cancelled) return
-      const found = all.find(a => a.id === selectedAlertId)
-      setAlert(found || null)
+      setAlert(found)
       setLoading(false)
     }).catch(() => {
       if (!cancelled) setLoading(false)

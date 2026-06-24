@@ -17,7 +17,7 @@ import secrets
 
 SUPABASE_URL = 'https://ubtktcyucgkcnhuqizba.supabase.co'
 ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidGt0Y3l1Y2drY25odXFpemJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MDk1MzEsImV4cCI6MjA5NzE4NTUzMX0.Yyh-4dHIDq55ePR6SdQH303cGidypiEi2ru_-CEaiJg'
-ADMIN_TOKEN = 'REDACTED_TOKEN'
+ADMIN_TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
 REF = 'ubtktcyucgkcnhuqizba'
 
 # Générer un email + mot de passe de test uniques

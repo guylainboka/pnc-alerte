@@ -1,8 +1,9 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
+import { signUp } from '@/lib/auth-service'
 import { useState, useRef } from 'react'
-import { Eye, EyeOff, ChevronLeft, Check, ShieldCheck, Camera, CreditCard } from 'lucide-react'
+import { Eye, EyeOff, ChevronLeft, Check, ShieldCheck, Camera, CreditCard, AlertCircle } from 'lucide-react'
 
 const provinces = [
   'Kinshasa', 'Kongo-Central', 'Kwango', 'Kwilu', 'Mai-Ndombe',
@@ -16,7 +17,7 @@ const communes: Record<string, string[]> = {
 }
 
 export default function RegisterScreen() {
-  const { navigate, login, darkMode } = useAppStore()
+  const { navigate, darkMode } = useAppStore()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({
     name: '', phone: '', email: '', province: 'Kinshasa', commune: 'Gombe',
@@ -26,6 +27,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [carteError, setCarteError] = useState('')
+  const [globalError, setGlobalError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const updateForm = (field: string, value: string | boolean) => setForm((prev) => ({ ...prev, [field]: value }))
@@ -42,16 +44,50 @@ export default function RegisterScreen() {
     }
   }
 
-  const handleRegister = () => {
-    if (!form.carteElecteurNumero.trim() || !form.carteElecteurImage) {
-      setCarteError('La carte d\'électeur est obligatoire pour l\'inscription')
+  const handleRegister = async () => {
+    setGlobalError('')
+    // Validations finales
+    if (!form.acceptTerms) {
+      setGlobalError("Vous devez accepter les conditions d'utilisation pour continuer")
       return
     }
+    if (form.password.length < 6) {
+      setGlobalError('Le mot de passe doit contenir au moins 6 caractères')
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      setGlobalError('Les mots de passe ne correspondent pas')
+      return
+    }
+    if (!form.email.trim() || !form.name.trim() || !form.phone.trim()) {
+      setGlobalError('Tous les champs personnels sont obligatoires')
+      return
+    }
+    if (!form.carteElecteurNumero.trim()) {
+      setCarteError("Le numéro de carte d'électeur est obligatoire")
+      setStep(3)
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      login(form.name || 'Jean Mukendi', form.email || 'jean@email.com', form.phone || '+243 812 000 000')
-      setLoading(false)
-    }, 1500)
+    const { user, error } = await signUp({
+      email: form.email.trim(),
+      password: form.password,
+      fullName: form.name.trim(),
+      phone: form.phone.trim(),
+      carteElecteurNumero: form.carteElecteurNumero.trim(),
+      province: form.province,
+      commune: form.commune,
+    })
+    setLoading(false)
+
+    if (error) {
+      setGlobalError(error)
+      return
+    }
+    if (user) {
+      navigate('dashboard')
+    }
   }
 
   const bg = darkMode ? 'bg-[#0a1a3a]' : 'bg-white'
@@ -79,6 +115,13 @@ export default function RegisterScreen() {
       </div>
 
       <div className="flex-1 px-6 py-6 overflow-y-auto">
+        {globalError && (
+          <div className="mb-4 bg-[#FF3B30]/10 rounded-xl p-3 border border-[#FF3B30]/20 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-[#FF3B30] mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-[#FF3B30]">{globalError}</p>
+          </div>
+        )}
+
         {step === 1 && (
           <div className="space-y-4">
             <h3 className={`text-base font-bold ${textPrimary} mb-2`}>Informations personnelles</h3>
@@ -180,7 +223,7 @@ export default function RegisterScreen() {
               <label className={`text-xs font-medium ${textMuted} mb-1.5 block`}>Mot de passe</label>
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => updateForm('password', e.target.value)}
-                  placeholder="Minimum 8 caractères" className={`w-full px-4 py-3 ${inputBg} rounded-xl text-sm border focus:border-[#1E5EFF] outline-none pr-12 ${darkMode ? 'text-white' : ''}`} />
+                  placeholder="Minimum 6 caractères" className={`w-full px-4 py-3 ${inputBg} rounded-xl text-sm border focus:border-[#1E5EFF] outline-none pr-12 ${darkMode ? 'text-white' : ''}`} />
                 <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -207,16 +250,22 @@ export default function RegisterScreen() {
 
       <div className="px-6 pb-8 pt-4">
         <button onClick={() => {
-          if (step === 3 && (!form.carteElecteurNumero.trim() || !form.carteElecteurImage)) {
-            setCarteError('Veuillez fournir votre carte d\'électeur')
+          setGlobalError('')
+          if (step === 3 && (!form.carteElecteurNumero.trim())) {
+            setCarteError("Veuillez fournir le numéro de votre carte d'électeur")
             return
           }
           if (step < 4) setStep(step + 1)
           else handleRegister()
-        }} disabled={loading}
-          className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-60">
+        }} disabled={loading || (step === 4 && !form.acceptTerms)}
+          className="w-full py-3.5 bg-[#1E5EFF] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform shadow-lg shadow-blue-500/25 disabled:opacity-60 disabled:cursor-not-allowed">
           {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : step < 4 ? 'Continuer' : 'Créer mon compte'}
         </button>
+        {step === 4 && !form.acceptTerms && (
+          <p className="text-center mt-3 text-[10px] text-[#F59E0B]">
+            Veuillez accepter les conditions pour activer le bouton
+          </p>
+        )}
         <p className={`text-center mt-4 text-sm ${textMuted}`}>
           Déjà inscrit ? <button onClick={() => navigate('login')} className="text-[#1E5EFF] font-semibold">Se connecter</button>
         </p>
