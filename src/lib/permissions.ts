@@ -46,8 +46,8 @@ export async function requestPermission(type: PermissionType): Promise<Permissio
         const result = await LocalNotifications.requestPermissions()
         const state = result.display || 'granted'
         return {
-          granted: state === 'granted' || state === 'yes',
-          denied: state === 'denied' || state === 'no',
+          granted: state === 'granted' || (state as string) === 'yes',
+          denied: state === 'denied' || (state as string) === 'no',
           prompt: state === 'prompt',
         }
       }
@@ -104,8 +104,8 @@ export async function checkPermission(type: PermissionType): Promise<PermissionS
         const result = await LocalNotifications.checkPermissions()
         const state = result.display || 'granted'
         return {
-          granted: state === 'granted' || state === 'yes',
-          denied: state === 'denied' || state === 'no',
+          granted: state === 'granted' || (state as string) === 'yes',
+          denied: state === 'denied' || (state as string) === 'no',
           prompt: state === 'prompt',
         }
       }

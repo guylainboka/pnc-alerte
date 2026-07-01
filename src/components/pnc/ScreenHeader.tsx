@@ -6,7 +6,7 @@ import { ChevronLeft } from 'lucide-react'
 interface ScreenHeaderProps {
   title: string
   showBack?: boolean
-  backScreen?: Parameters<ReturnType<typeof useAppStore>['navigate']>[0]
+  backScreen?: string
   rightAction?: React.ReactNode
 }
 

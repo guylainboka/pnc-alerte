@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  // Autoriser les requêtes cross-origin depuis le preview Z.ai
+  allowedDevOrigins: [
+    '.space-z.ai',
+  ],
 };
 
 export default nextConfig;

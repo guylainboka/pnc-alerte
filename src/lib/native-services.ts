@@ -228,7 +228,7 @@ export const nativeNotifications = {
   async cancelAll() {
     if (!isNative()) return
     const { LocalNotifications } = await import('@capacitor/local-notifications')
-    await LocalNotifications.cancelAll()
+    await LocalNotifications.cancel({ notifications: [] })
   },
 }
 
