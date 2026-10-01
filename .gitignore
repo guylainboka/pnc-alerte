@@ -93,3 +93,7 @@ mini-services/*/*.log
 
 # Local SQLite database (mode démo)
 /db/
+
+# Tool results (internal)
+/tool-results/
+/worklog.md
