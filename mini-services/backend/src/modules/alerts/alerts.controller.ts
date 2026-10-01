@@ -10,12 +10,15 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { AlertsService } from './alerts.service';
 import { AlertsGateway } from './alerts.gateway';
 import { CreateSignalementDto } from './alerts.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('api/alerts')
+@UseGuards(JwtAuthGuard)
 export class AlertsController {
   constructor(
     private readonly alertsService: AlertsService,
@@ -38,15 +41,12 @@ export class AlertsController {
     return alert;
   }
 
-  /** POST /api/alerts — crée un nouveau signalement et diffuse alert:new */
+  /** POST /api/alerts — crée un nouveau signalement et diffuse alert:new.
+   * La validation des champs `type` et `description` est garantie par le DTO
+   * (CreateSignalementDto : @IsString() @IsIn(...) + @IsString() non-opt).
+   */
   @Post()
   async create(@Body() dto: CreateSignalementDto) {
-    if (!dto.type || !dto.description) {
-      throw new HttpException(
-        'Les champs type et description sont requis',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     const alert = await this.alertsService.create(dto);
     this.alertsGateway.broadcastNewAlert(alert);
     return alert;

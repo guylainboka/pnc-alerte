@@ -7,12 +7,17 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    // select: omet passwordHash — les mots de passe hachés ne sortent jamais du serveur.
     const citizen = await db.citizen.findUnique({
       where: { id },
-      include: {
-        commissariat: {
-          select: { id: true, name: true, code: true },
-        },
+      select: {
+        id: true, reference: true, firstName: true, lastName: true,
+        phone: true, email: true, gender: true, dateOfBirth: true,
+        address: true, city: true, commune: true, latitude: true,
+        longitude: true, lastLocation: true, lastLocationAt: true,
+        status: true, verified: true, totalAlerts: true, totalComplaints: true,
+        commissariatId: true, createdAt: true, updatedAt: true,
+        commissariat: { select: { id: true, name: true, code: true } },
       },
     });
 
@@ -25,7 +30,7 @@ export async function GET(
 
     return NextResponse.json(citizen);
   } catch (error) {
-    console.error('Citizen GET error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Citizen GET error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch citizen' },
       { status: 500 }
@@ -52,14 +57,24 @@ export async function PATCH(
       updateData.lastLocationAt = new Date();
     }
 
+    // select: omet passwordHash dans la réponse PATCH également.
     const citizen = await db.citizen.update({
       where: { id },
       data: updateData,
+      select: {
+        id: true, reference: true, firstName: true, lastName: true,
+        phone: true, email: true, gender: true, dateOfBirth: true,
+        address: true, city: true, commune: true, latitude: true,
+        longitude: true, lastLocation: true, lastLocationAt: true,
+        status: true, verified: true, totalAlerts: true, totalComplaints: true,
+        commissariatId: true, createdAt: true, updatedAt: true,
+        commissariat: { select: { id: true, name: true, code: true } },
+      },
     });
 
     return NextResponse.json(citizen);
   } catch (error) {
-    console.error('Citizen PATCH error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Citizen PATCH error:', error);
     return NextResponse.json(
       { error: 'Failed to update citizen' },
       { status: 500 }

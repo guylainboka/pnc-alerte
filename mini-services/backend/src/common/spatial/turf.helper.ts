@@ -1,10 +1,11 @@
 // ============================================================================
-// Turf.js helpers — Requêtes spatiales sans PostGIS (dev)
+// Turf.js helpers — Requêtes spatiales applicatives (portables PostGIS)
 // ============================================================================
-// En développement, on utilise PGlite (sans PostGIS). Les calculs spatiaux
-// (distance, point le plus proche, cap) se font donc côté applicatif avec
-// Turf.js. En production, ces helpers peuvent être remplacés par des
-// requêtes SQL PostGIS ST_Distance, etc.
+// Les calculs spatiaux (distance, point le plus proche, cap) sont effectués
+// côté applicatif avec Turf.js. En production sur PostgreSQL + PostGIS, ces
+// helpers peuvent être remplacés par des requêtes SQL ST_Distance,
+// ST_DWithin, etc. — les signatures des fonctions publiques restent
+// identiques pour faciliter la migration.
 // ============================================================================
 
 import * as turf from '@turf/turf';
@@ -70,7 +71,7 @@ export function nearestPoint(
     features: points.map((p) => ({
       type: 'Feature' as const,
       geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
-      properties: { id: p.id, ...p },
+      properties: { ...p },
     })),
   };
 

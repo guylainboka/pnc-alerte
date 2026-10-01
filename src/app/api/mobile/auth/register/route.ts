@@ -15,7 +15,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { citizensRepository } from '@/lib/repositories';
 import { getSupabaseServer, isSupabaseMode } from '@/lib/supabase';
 
-// Format de hachage cohérent avec le reste du codebase (démo)
+// Format de hachage local — cohérent avec le mode local (non-Supabase).
+// En mode Supabase, le mot de passe est géré par Supabase Auth.
 function hashPassword(password: string): string {
   return `hash_${Buffer.from(password).toString('base64')}`;
 }
@@ -96,7 +97,8 @@ export async function POST(request: NextRequest) {
             status: 'actif',
             verified: false,
           })
-          .select('*, commissariat:commissariats(id,name,code)')
+          // select explicite — ne renvoie JAMAIS password_hash (défense en profondeur)
+          .select('id, reference, first_name, last_name, phone, email, gender, city, commune, address, latitude, longitude, status, verified, commissariat:commissariats(id,name,code)')
           .single();
         if (citizenError) {
           return NextResponse.json(
@@ -141,7 +143,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Mobile register error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Mobile register error:', error);
     if (error?.code === 'P2002') {
       return NextResponse.json(
         { error: 'Ce téléphone ou email est déjà inscrit' },
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: "Échec de l'inscription: " + (error?.message || 'erreur inconnue') },
+      { error: "Échec de l'inscription" },
       { status: 500 }
     );
   }

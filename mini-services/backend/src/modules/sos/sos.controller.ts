@@ -12,12 +12,15 @@ import {
   Query,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { SosService } from './sos.service';
 import { SosGateway } from './sos.gateway';
 import { CreateSosDto, UpdateSosDto } from './sos.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('api/sos')
+@UseGuards(JwtAuthGuard)
 export class SosController {
   constructor(
     private readonly sosService: SosService,
@@ -50,16 +53,12 @@ export class SosController {
   /**
    * POST /api/sos
    * Crée un nouveau SOS (depuis l'app mobile PNC Alerte) et diffuse
-   * en temps réel l'événement sos:new à tous les clients connectés.
+   * en temps réel l'événement sos:new à tous les opérateurs authentifiés.
+   * La validation des champs latitude/longitude est garantie par le DTO
+   * (CreateSosDto avec @IsNumber() non-optionnel) + le ValidationPipe global.
    */
   @Post()
   async create(@Body() dto: CreateSosDto) {
-    if (dto.latitude === undefined || dto.longitude === undefined) {
-      throw new HttpException(
-        'Les champs latitude et longitude sont requis',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     const sos = await this.sosService.create(dto);
     this.sosGateway.broadcastNewSos(sos);
     return sos;

@@ -78,7 +78,7 @@ export default function PNCCommandCenter() {
         </main>
         <footer className="border-t px-6 py-3 mt-auto">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>© 2024 Police Nationale Congolaise — Centre de Commandement</span>
+            <span>© {new Date().getFullYear()} Police Nationale Congolaise — Centre de Commandement</span>
             <span>République Démocratique du Congo</span>
           </div>
         </footer>

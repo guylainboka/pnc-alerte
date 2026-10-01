@@ -2,10 +2,19 @@
 // Disparus Controller — Routes REST /api/disparus
 // ============================================================================
 
-import { Controller, Get, Param, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  HttpException,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { DisparusService } from './disparus.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('api/disparus')
+@UseGuards(JwtAuthGuard)
 export class DisparusController {
   constructor(private readonly disparusService: DisparusService) {}
 

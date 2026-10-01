@@ -32,7 +32,7 @@ import { getSupabaseServer, isSupabaseMode } from '@/lib/supabase';
 const VALID_TYPES = ['vol', 'agression', 'accident', 'incendie', 'autre'];
 const VALID_PRIORITIES = ['urgente', 'haute', 'moyenne', 'basse'];
 
-// Trouve le commissariat le plus pertinent (premier par défaut en mode démo)
+// Trouve le commissariat le plus pertinent (premier par défaut si pas de géoloc)
 async function findNearestCommissariat(lat?: number, lng?: number): Promise<string | null> {
   const first = await db.commissariat.findFirst({
     orderBy: { name: 'asc' },

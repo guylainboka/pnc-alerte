@@ -99,7 +99,12 @@ export class AlertsService {
     );
 
     const created = await this.findOne(id);
-    return created!;
+    if (!created) {
+      // Très peu probable : on vient d'insérer la ligne, le re-fetch doit
+      // marcher. Si ça arrive (concurrence / suppression), on throw.
+      throw new Error('Signalement inséré mais introuvable au re-fetch');
+    }
+    return created;
   }
 
   /** Déduit la priorité à partir du type de signalement */

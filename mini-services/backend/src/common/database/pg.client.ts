@@ -2,8 +2,9 @@
 // PGlite — client PostgreSQL embarqué (WASM), sans serveur
 // ============================================================================
 // PGlite persiste les données dans un dossier sur le disque. Aucun serveur
-// PostgreSQL n'est nécessaire en développement. En production, on peut
-// remplacer ce fichier par un vrai client PostgreSQL — le SQL reste identique.
+// PostgreSQL n'est requis. Le SQL utilisé par les services reste 100%
+// compatible avec un vrai PostgreSQL — il suffit de remplacer la
+// librairie par `pg` (node-postgres) en production.
 // ============================================================================
 
 import { PGlite } from '@electric-sql/pglite';

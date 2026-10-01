@@ -9,10 +9,12 @@ export async function GET(
     const { id } = await params;
     const service = await db.externalService.findUnique({
       where: { id },
-      include: {
-        logs: {
-          orderBy: { createdAt: 'desc' },
-        },
+      // select: omet apiKey — défense en profondeur
+      select: {
+        id: true, name: true, type: true, endpoint: true,
+        status: true, lastSyncAt: true, description: true,
+        createdAt: true, updatedAt: true,
+        logs: { orderBy: { createdAt: 'desc' } },
       },
     });
 
@@ -22,7 +24,7 @@ export async function GET(
 
     return NextResponse.json(service);
   } catch (error) {
-    console.error('External Service GET by ID error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('External Service GET by ID error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch external service' },
       { status: 500 }
@@ -58,17 +60,18 @@ export async function PATCH(
     const service = await db.externalService.update({
       where: { id },
       data,
-      include: {
-        logs: {
-          take: 10,
-          orderBy: { createdAt: 'desc' },
-        },
+      // select: omet apiKey de la réponse PATCH
+      select: {
+        id: true, name: true, type: true, endpoint: true,
+        status: true, lastSyncAt: true, description: true,
+        createdAt: true, updatedAt: true,
+        logs: { take: 10, orderBy: { createdAt: 'desc' } },
       },
     });
 
     return NextResponse.json(service);
   } catch (error) {
-    console.error('External Service PATCH error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('External Service PATCH error:', error);
     return NextResponse.json(
       { error: 'Failed to update external service' },
       { status: 500 }

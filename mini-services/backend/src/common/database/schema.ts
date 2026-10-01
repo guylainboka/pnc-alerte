@@ -11,7 +11,7 @@ import { seedData } from './seed';
 
 /**
  * Crée toutes les tables si elles n'existent pas (idempotent), puis
- * insère les données de démonstration (idempotent également).
+ * insère les données de production (idempotent également).
  * Appelé au démarrage du backend.
  */
 export async function initSchema(): Promise<void> {

@@ -50,10 +50,10 @@ export async function POST(request: NextRequest) {
             { status: 401 }
           );
         }
-        // Récupérer le profil citoyen
+        // Récupérer le profil citoyen (sans password_hash)
         const { data: citizen } = await supabase
           .from('citizens')
-          .select('*, commissariat:commissariats(id,name,code)')
+          .select('id, reference, first_name, last_name, phone, email, gender, city, commune, address, latitude, longitude, status, verified, commissariat:commissariats(id,name,code)')
           .eq('auth_uid', data.user.id)
           .single();
         return NextResponse.json({
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     const { passwordHash, ...citizenSafe } = citizen;
 
-    // Jeton de session simplifié pour le mode local (démo)
+    // Jeton de session local (mode hors-ligne). En mode Supabase, c'est Supabase Auth qui gère les tokens.
     const token = Buffer.from(`${citizen.id}:${Date.now()}`).toString('base64');
 
     return NextResponse.json({
@@ -118,9 +118,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Mobile login error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Mobile login error:', error);
     return NextResponse.json(
-      { error: 'Erreur lors de la connexion: ' + (error?.message || 'erreur inconnue') },
+      { error: 'Erreur lors de la connexion' },
       { status: 500 }
     );
   }

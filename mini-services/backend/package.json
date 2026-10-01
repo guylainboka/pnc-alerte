@@ -7,22 +7,30 @@
     "start": "bun index.ts"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5",
     "@nestjs/common": "^12",
     "@nestjs/core": "^12",
     "@nestjs/platform-express": "^12",
     "@nestjs/platform-socket.io": "^12",
+    "@nestjs/throttler": "^6.7.1",
     "@nestjs/websockets": "^12",
-    "@electric-sql/pglite": "^0.5",
     "@turf/turf": "^7",
-    "class-validator": "^0.14",
+    "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5",
+    "class-validator": "^0.14",
+    "compression": "^1.8.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
     "reflect-metadata": "^0.2",
     "rxjs": "^7",
     "socket.io": "^4",
     "uuid": "^11"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20"
+    "@types/bcryptjs": "^3.0.0",
+    "@types/compression": "^1.8.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20",
+    "typescript": "^5"
   }
 }

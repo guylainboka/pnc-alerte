@@ -2,10 +2,19 @@
 // Citizens Controller — Routes REST /api/citizens
 // ============================================================================
 
-import { Controller, Get, Param, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  HttpException,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { CitizensService } from './citizens.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('api/citizens')
+@UseGuards(JwtAuthGuard)
 export class CitizensController {
   constructor(private readonly citizensService: CitizensService) {}
 

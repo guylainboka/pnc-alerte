@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAppStore, type Section } from '@/lib/store';
-import { Bell, Search, User, LogOut, Cloud, Database } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Bell, User, LogOut, Database, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Tooltip,
   TooltipContent,
@@ -33,34 +31,47 @@ const sectionTitles: Record<Section, string> = {
   stations: 'Commissariats & Juridictions',
 };
 
+/**
+ * Badge de connexion — ping le backend NestJS (port 3001 via le gateway
+ * Caddy) au montage, puis toutes les 30 s. Affiche "Connecté" si le
+ * backend répond sur /api/health, sinon "Hors ligne".
+ *
+ * (Remplace l'ancien badge basé sur la config Supabase.)
+ */
 function ConnectionBadge() {
-  const [status, setStatus] = useState<{
-    mode: 'supabase' | 'local';
-    configured: boolean;
-  } | null>(null);
+  const [online, setOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
     let active = true;
-    fetch('/api/mobile/status')
-      .then((r) => r.json())
-      .then((d) => {
-        if (active) {
-          setStatus({ mode: d.backend, configured: d.supabase });
-        }
-      })
-      .catch(() => active && setStatus({ mode: 'local', configured: false }));
+
+    const check = async () => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch('/api/health?XTransformPort=3001', {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (!active) return;
+        setOnline(res.ok);
+      } catch {
+        if (active) setOnline(false);
+      }
+    };
+
+    check();
+    const id = setInterval(check, 30000);
     return () => {
       active = false;
+      clearInterval(id);
     };
   }, []);
 
-  const isSupabase = status?.mode === 'supabase';
-  const Icon = isSupabase ? Cloud : Database;
-  const label = isSupabase
-    ? 'Backend Supabase connecté — application mobile synchronisée'
-    : status?.configured
-    ? 'Supabase détecté'
-    : 'Mode local — configurez Supabase pour l\'application mobile';
+  const Icon = online ? Server : Database;
+  const label = online ? 'Connecté' : 'Hors ligne';
+  const tooltip = online
+    ? 'Backend NestJS connecté — temps réel actif'
+    : 'Backend NestJS injoignable — vérifiez que le service tourne sur le port 3001';
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -69,30 +80,28 @@ function ConnectionBadge() {
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border">
             <span
               className={`relative flex h-2 w-2 ${
-                isSupabase ? '' : 'animate-pulse'
+                online ? '' : 'animate-pulse'
               }`}
             >
               <span
                 className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  isSupabase
-                    ? 'bg-green-500 animate-ping'
-                    : 'bg-amber-500'
+                  online ? 'bg-green-500 animate-ping' : 'bg-amber-500'
                 }`}
               />
               <span
                 className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isSupabase ? 'bg-green-600' : 'bg-amber-600'
+                  online ? 'bg-green-600' : 'bg-amber-600'
                 }`}
               />
             </span>
             <Icon className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="text-[11px] font-medium text-muted-foreground">
-              {isSupabase ? 'Mobile connecté' : 'Mode démo'}
+              {label}
             </span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs max-w-xs">
-          {label}
+          {tooltip}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -101,6 +110,10 @@ function ConnectionBadge() {
 
 export function Header() {
   const { activeSection, user, logout } = useAppStore();
+
+  // Aucune notification en dur. Quand l'endpoint /api/notifications existera
+  // côté NestJS, on pourra hydrater ce tableau via un fetch + interval.
+  const notifications: { id: string; title: string; subtitle: string }[] = [];
 
   return (
     <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b px-6 py-3">
@@ -113,50 +126,39 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Connection status (mobile/Supabase) */}
+          {/* Connection status (backend NestJS) */}
           <ConnectionBadge />
-
-          {/* Search */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher..."
-              className="pl-9 w-64 h-9 text-sm"
-            />
-          </div>
 
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-red-500 text-white">
-                  3
-                </Badge>
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-red-500 text-white rounded-full">
+                    {notifications.length}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <div className="px-3 py-2 border-b">
                 <p className="text-sm font-semibold">Notifications</p>
               </div>
-              <DropdownMenuItem className="py-2.5">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Alerte urgente — Vol à main armée</span>
-                  <span className="text-xs text-muted-foreground">Gombe, il y a 15 min</span>
+              {notifications.length === 0 ? (
+                <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                  Aucune notification
                 </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="py-2.5">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Nouvelle plainte déposée</span>
-                  <span className="text-xs text-muted-foreground">Barumbu, il y a 30 min</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="py-2.5">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">INTERPOL — Notice rouge reçue</span>
-                  <span className="text-xs text-muted-foreground">il y a 2 heures</span>
-                </div>
-              </DropdownMenuItem>
+              ) : (
+                notifications.map((n) => (
+                  <DropdownMenuItem key={n.id} className="py-2.5">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium">{n.title}</span>
+                      <span className="text-xs text-muted-foreground">{n.subtitle}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -167,7 +169,7 @@ export function Header() {
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {user.firstName[0]}{user.lastName[0]}
+                      {user.firstName?.[0] ?? '?'}{user.lastName?.[0] ?? ''}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block text-left">

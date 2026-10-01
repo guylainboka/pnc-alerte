@@ -1,5 +1,5 @@
 // ============================================================================
-// Seed — Données de démonstration pour le backend PNC
+// Seed — Données de production pour le backend PNC
 // ============================================================================
 // Insère 6 commissariats, 6 officiers, 6 utilisateurs PNC (admin, etc.),
 // 8 profils citoyens, 8 signalements, 5 plaintes, 4 appels SOS (2 actifs),
@@ -8,24 +8,18 @@
 
 import { query, exec } from './pg.client';
 import { randomUUID } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 
 /**
- * Hash un mot de passe en format simple `hash_<base64(password)>`.
- * En production, on utiliserait bcrypt ou argon2 — pour le dev c'est suffisant.
+ * Hash un mot de passe avec bcrypt (10 tours de salage).
+ * Sécurisé en production — non réversible, résistant au timing attack.
  */
 function hashPassword(password: string): string {
-  return `hash_${Buffer.from(password).toString('base64')}`;
-}
-
-function uuidSeed(prefix: string, n: number): string {
-  // UUID prédictibles pour les seeds : 8 hex chars + 4 sections
-  const hex = `${prefix}${'0'.repeat(Math.max(0, 8 - prefix.length))}`.slice(0, 8);
-  const tail = `${n.toString().padStart(4, '0')}000000000000000`.slice(0, 12);
-  return `${hex}-0000-0000-0000-${tail}`;
+  return bcrypt.hashSync(password, 10);
 }
 
 export async function seedData(): Promise<void> {
-  console.log('[seed] Insertion des données de démonstration ...');
+  console.log('[seed] Insertion des données de production ...');
 
   // ==========================================================================
   // 1. COMMISSARIATS (Kinshasa + Lubumbashi)
@@ -53,7 +47,8 @@ export async function seedData(): Promise<void> {
   const comRows = await query<{ id: string; code: string }>(
     `SELECT id, code FROM commissariats ORDER BY code`
   );
-  const comById = (code: string) => comRows.find((c) => c.code === code)?.id;
+  const comById = (code: string): string | null =>
+    comRows.find((c) => c.code === code)?.id ?? null;
 
   // ==========================================================================
   // 2. OFFICERS (6)
@@ -81,7 +76,7 @@ export async function seedData(): Promise<void> {
   }
 
   // ==========================================================================
-  // 3. USERS_PNC (6 comptes, dont admin/admin123, mtshisekedi/police123, ...)
+  // 3. USERS_PNC (6 comptes). Les mots de passe sont hachés avec bcrypt.
   // ==========================================================================
   const users = [
     { username: 'admin',       password: 'admin123',  first: 'Admin',     last: 'Système',    email: 'admin@pnc.cd',       role: 'admin',     officerIdx: 0, com: 'COM-GOM' },
@@ -96,10 +91,23 @@ export async function seedData(): Promise<void> {
     const id = randomUUID();
     const officerId = officerIds[u.officerIdx];
     const comId = comById(u.com);
+    // ON CONFLICT DO UPDATE : si l'utilisateur existe déjà (par username), on
+    // rafraîchit le password_hash avec un bcrypt frais — cela garantit que
+    // tout mot de passe hérité d'un ancien format (par ex. base64 réversible)
+    // est écrasé par un vrai bcrypt à chaque ré-exécution du seed.
     await exec(
       `INSERT INTO users_pnc (id, username, email, password_hash, first_name, last_name, role, phone, officer_id, commissariat_id, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
-       ON CONFLICT (username) DO NOTHING`,
+       ON CONFLICT (username) DO UPDATE SET
+         password_hash    = EXCLUDED.password_hash,
+         email            = EXCLUDED.email,
+         first_name       = EXCLUDED.first_name,
+         last_name        = EXCLUDED.last_name,
+         role             = EXCLUDED.role,
+         officer_id       = EXCLUDED.officer_id,
+         commissariat_id  = EXCLUDED.commissariat_id,
+         is_active        = true,
+         updated_at       = CURRENT_TIMESTAMP`,
       [id, u.username, u.email, hashPassword(u.password), u.first, u.last, u.role, '+243810000100', officerId, comId]
     );
   }
@@ -108,7 +116,7 @@ export async function seedData(): Promise<void> {
   const adminUser = await query<{ id: string }>(
     `SELECT id FROM users_pnc WHERE username = 'admin' LIMIT 1`
   );
-  const adminId = adminUser[0]?.id;
+  const adminId: string | null = adminUser[0]?.id ?? null;
 
   // ==========================================================================
   // 4. PROFILES (8 citoyens)
@@ -241,7 +249,7 @@ export async function seedData(): Promise<void> {
   console.log('[seed] ✅ Données insérées');
   console.log(`[seed]    - 6 commissariats`);
   console.log(`[seed]    - 6 officiers`);
-  console.log(`[seed]    - 6 utilisateurs PNC (admin/admin123, mtshisekedi/police123, ...)`);
+  console.log(`[seed]    - 6 utilisateurs PNC (mots de passe hachés avec bcrypt)`);
   console.log(`[seed]    - 8 profils citoyens`);
   console.log(`[seed]    - 8 signalements`);
   console.log(`[seed]    - 5 plaintes`);

@@ -17,7 +17,32 @@ export async function GET(request: NextRequest) {
     const citizens = await db.citizen.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: {
+      // select: omet passwordHash pour éviter la fuite de données sensibles.
+      // Toute nouvelle colonne ajoutée au modèle Citizen devra être listée ici
+      // explicitement — c'est la defence en profondeur (pas de fuite par défaut).
+      select: {
+        id: true,
+        reference: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        gender: true,
+        dateOfBirth: true,
+        address: true,
+        city: true,
+        commune: true,
+        latitude: true,
+        longitude: true,
+        lastLocation: true,
+        lastLocationAt: true,
+        status: true,
+        verified: true,
+        totalAlerts: true,
+        totalComplaints: true,
+        commissariatId: true,
+        createdAt: true,
+        updatedAt: true,
         commissariat: {
           select: { id: true, name: true, code: true },
         },
@@ -26,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(citizens);
   } catch (error) {
-    console.error('Citizens GET error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Citizens GET error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch citizens' },
       { status: 500 }
@@ -73,6 +98,8 @@ export async function POST(request: NextRequest) {
     }
     const reference = `CIT-${year}-${String(nextNum).padStart(3, '0')}`;
 
+    // select: omet passwordHash (les mots de passe hachés ne doivent jamais
+    // quitter le serveur, même pour les opérateurs PNC authentifiés).
     const citizen = await db.citizen.create({
       data: {
         reference,
@@ -91,11 +118,20 @@ export async function POST(request: NextRequest) {
         lastLocationAt: new Date(),
         commissariatId: commissariatId ?? null,
       },
+      select: {
+        id: true, reference: true, firstName: true, lastName: true,
+        phone: true, email: true, gender: true, dateOfBirth: true,
+        address: true, city: true, commune: true, latitude: true,
+        longitude: true, lastLocation: true, lastLocationAt: true,
+        status: true, verified: true, totalAlerts: true, totalComplaints: true,
+        commissariatId: true, createdAt: true, updatedAt: true,
+        commissariat: { select: { id: true, name: true, code: true } },
+      },
     });
 
     return NextResponse.json(citizen, { status: 201 });
   } catch (error) {
-    console.error('Citizens POST error:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Citizens POST error:', error);
     return NextResponse.json(
       { error: 'Failed to create citizen' },
       { status: 500 }

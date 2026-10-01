@@ -1,9 +1,9 @@
 // ============================================================================
-// Point d'entrée — Backend NestJS PNC (port 3001)
+// Point d'entrée — Backend NestJS PNC (port 3001 par défaut)
 // ============================================================================
-// Le backend écoute sur http://localhost:3001 (port interne).
-// Le gateway Caddy expose ce port vers l'extérieur via le query param
-// ?XTransformPort=3001 dans l'URL de l'API.
+// Le backend écoute sur http://localhost:3001 (port interne, configurable
+// via PORT). Le gateway Caddy expose ce port vers l'extérieur via le query
+// param ?XTransformPort=3001 dans l'URL de l'API.
 // ============================================================================
 
 import 'reflect-metadata';

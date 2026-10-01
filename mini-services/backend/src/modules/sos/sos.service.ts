@@ -25,7 +25,24 @@ export interface SosRecord {
   citizenPhone?: string | null;
 }
 
-function rowToSos(r: any): SosRecord {
+interface SosRow {
+  id: string;
+  reference: string;
+  user_id: string | null;
+  latitude: number;
+  longitude: number;
+  location_text: string | null;
+  status: string;
+  agent_assigned: string | null;
+  response_time_seconds: number | null;
+  notes: string | null;
+  created_at: string;
+  closed_at: string | null;
+  citizen_name?: string | null;
+  citizen_phone?: string | null;
+}
+
+function rowToSos(r: SosRow): SosRecord {
   return {
     id: r.id,
     reference: r.reference,
@@ -62,7 +79,7 @@ export class SosService {
          LEFT JOIN profiles p ON p.id = s.user_id
          ORDER BY s.created_at DESC`;
 
-    const rows = await query(sql);
+    const rows = await query<SosRow>(sql);
     return rows.map(rowToSos);
   }
 
@@ -70,12 +87,12 @@ export class SosService {
    * Récupère un SOS par son id.
    */
   async findOne(id: string): Promise<SosRecord | null> {
-    const row = await queryOne(
+    const row = await queryOne<SosRow>(
       `SELECT s.*, p.full_name AS citizen_name, p.phone AS citizen_phone
        FROM sos_calls s
        LEFT JOIN profiles p ON p.id = s.user_id
        WHERE s.id = $1`,
-      [id]
+      [id],
     );
     return row ? rowToSos(row) : null;
   }
@@ -99,16 +116,22 @@ export class SosService {
         dto.longitude,
         dto.locationText ?? null,
         dto.notes ?? null,
-      ]
+      ],
     );
 
     const created = await this.findOne(id);
-    return created!;
+    if (!created) {
+      // Très peu probable : on vient d'insérer la ligne, le re-fetch doit
+      // marcher. Si ça arrive (concurrence / suppression), on throw.
+      throw new Error('SOS inséré mais introuvable au re-fetch');
+    }
+    return created;
   }
 
   /**
-   * Met à jour le statut d'un SOS. Si le statut passe à 'cloture' ou 'annule',
-   * on enregistre la date de clôture.
+   * Met à jour un SOS. Tous les champs du DTO sont optionnels (PATCH).
+   * Si le statut passe à 'cloture' ou 'annule', on enregistre la date
+   * de clôture via `closed_at = CURRENT_TIMESTAMP`.
    */
   async update(id: string, dto: UpdateSosDto): Promise<SosRecord | null> {
     const existing = await this.findOne(id);
@@ -116,13 +139,20 @@ export class SosService {
       return null;
     }
 
-    const isClosing = dto.status === 'cloture' || dto.status === 'annule';
-    const closedAt = isClosing ? 'CURRENT_TIMESTAMP' : 'NULL';
+    // Construction dynamique des SET — on ne touche qu'aux champs fournis.
+    const updates: string[] = [`updated_at = CURRENT_TIMESTAMP`];
+    const params: unknown[] = [id];
+    let nextParamIdx = 2;
 
-    // Construction dynamique des SET
-    const updates: string[] = [`status = $2`, `updated_at = CURRENT_TIMESTAMP`];
-    const params: any[] = [id, dto.status];
-    let nextParamIdx = 3;
+    if (dto.status !== undefined && SOS_STATUSES.includes(dto.status)) {
+      updates.push(`status = $${nextParamIdx}`);
+      params.push(dto.status);
+      nextParamIdx++;
+      // Clôture automatique si le statut est cloture/annule.
+      if (dto.status === 'cloture' || dto.status === 'annule') {
+        updates.push(`closed_at = CURRENT_TIMESTAMP`);
+      }
+    }
 
     if (dto.agentAssigned !== undefined) {
       updates.push(`agent_assigned = $${nextParamIdx}`);
@@ -139,13 +169,11 @@ export class SosService {
       params.push(dto.notes);
       nextParamIdx++;
     }
-    if (isClosing) {
-      updates.push(`closed_at = CURRENT_TIMESTAMP`);
-    }
 
+    // Au moins `updated_at` est poussé, donc la requête n'est jamais vide.
     await exec(
       `UPDATE sos_calls SET ${updates.join(', ')} WHERE id = $1`,
-      params
+      params,
     );
 
     return this.findOne(id);
@@ -159,7 +187,7 @@ export class SosService {
     // Compte les SOS de l'année courante pour incrémenter le compteur
     const row = await queryOne<{ count: number }>(
       `SELECT COUNT(*)::int as count FROM sos_calls WHERE reference LIKE $1`,
-      [`SOS-${year}-%`]
+      [`SOS-${year}-%`],
     );
     const next = ((row?.count as number) || 0) + 1;
     return `SOS-${year}-${String(next).padStart(3, '0')}`;

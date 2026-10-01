@@ -23,33 +23,18 @@ export function LoginScreen() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Erreur de connexion');
-        toast.error(data.error || 'Erreur de connexion');
-        return;
-      }
-
-      login(data.user);
-      toast.success(`Bienvenue, ${data.user.firstName} ${data.user.lastName}`);
-    } catch {
-      setError('Erreur réseau. Veuillez réessayer.');
-      toast.error('Erreur réseau');
+      // login() appelle POST /api/auth/login?XTransformPort=3001 (backend NestJS)
+      // et lève une Error en cas d'identifiants invalides.
+      await login(username, password);
+      toast.success('Connexion réussie');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Erreur de connexion';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = (user: string) => {
-    setUsername(user);
-    setPassword(user === 'admin' ? 'admin123' : 'police123');
   };
 
   return (
@@ -151,33 +136,6 @@ export function LoginScreen() {
                 )}
               </Button>
             </form>
-
-            {/* Demo accounts */}
-            <div className="pt-4 border-t">
-              <p className="text-xs text-muted-foreground text-center mb-2">
-                Comptes de démonstration :
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => fillDemo('admin')}
-                >
-                  Administrateur
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => fillDemo('jmukendi')}
-                >
-                  Commissaire
-                </Button>
-              </div>
-            </div>
 
             <p className="text-[10px] text-muted-foreground/60 text-center pt-2">
               Accès réservé au personnel autorisé de la PNC

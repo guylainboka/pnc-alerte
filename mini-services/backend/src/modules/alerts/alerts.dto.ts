@@ -17,10 +17,11 @@ export class CreateSignalementDto {
 
   @IsString()
   @IsIn(SIGNALEMENT_TYPES as unknown as string[])
-  type: string;
+  // Assigné par class-transformer (ValidationPipe transform: true).
+  type!: string;
 
   @IsString()
-  description: string;
+  description!: string;
 
   @IsString()
   @IsOptional()

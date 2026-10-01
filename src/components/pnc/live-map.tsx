@@ -12,6 +12,10 @@
  * Temps réel : Socket.io (événements sos:new, sos:update)
  *
  * Tuiles : OpenStreetMap (gratuit, aucune clé API)
+ *
+ * SÉCURITÉ : les popups sont construits via setDOMContent() avec des
+ * nœuds DOM créés via document.createElement + textContent. AUCUNE
+ * interpolation de données utilisateur dans du HTML → immunité XSS.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -27,6 +31,11 @@ import { io, Socket } from 'socket.io-client';
 import { Siren, Building2, Navigation } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { Badge } from '@/components/ui/badge';
+
+const isDev = process.env.NODE_ENV !== 'production';
+const log = (...args: unknown[]) => {
+  if (isDev) console.log(...args);
+};
 
 interface SosFeature {
   id: string;
@@ -118,6 +127,146 @@ function CommissariatPin() {
   );
 }
 
+// ============================================================================
+// Helpers de construction DOM SÉCURISÉS (anti-XSS)
+// ============================================================================
+// Tous les textes proviennent de la base de données (citoyens, commissariats)
+// et peuvent contenir des caractères malveillants. On les insère via
+// textContent (qui échappe automatiquement le HTML) — JAMAIS via innerHTML.
+
+function el(
+  tag: string,
+  opts: {
+    text?: string;
+    className?: string;
+    style?: Record<string, string | number>;
+    children?: HTMLElement[];
+  } = {}
+): HTMLElement {
+  const node = document.createElement(tag);
+  if (opts.text !== undefined) node.textContent = opts.text;
+  if (opts.className) node.className = opts.className;
+  if (opts.style) {
+    for (const [k, v] of Object.entries(opts.style)) {
+      (node.style as unknown as Record<string, string | number>)[k] = v;
+    }
+  }
+  if (opts.children) {
+    for (const c of opts.children) node.appendChild(c);
+  }
+  return node;
+}
+
+function buildCommissariatPopup(com: CommissariatFeature): HTMLElement {
+  // Toutes les valeurs utilisateur passent par textContent → pas d'injection HTML possible
+  return el('div', {
+    style: { padding: '8px', minWidth: '180px' },
+    children: [
+      el('strong', { text: com.name }),
+      el('br'),
+      el('span', {
+        text: `Code: ${com.code}`,
+        style: { fontSize: '11px', color: '#666' },
+      }),
+      el('br'),
+      el('span', {
+        text: 'Commissariat PNC',
+        style: { fontSize: '11px', color: '#999' },
+      }),
+    ],
+  });
+}
+
+function buildSosPopup(sos: SosFeature): HTMLElement {
+  const color = statusColors[sos.status] || '#ef4444';
+  const children: HTMLElement[] = [];
+
+  // Référence (neutre, format contrôlé)
+  children.push(
+    el('div', {
+      style: { marginBottom: '4px' },
+      children: [
+        el('strong', {
+          text: sos.reference,
+          style: { fontSize: '12px', fontFamily: 'monospace' },
+        }),
+      ],
+    })
+  );
+
+  // Badge de statut (couleur statique issue de la map, texte mappé)
+  children.push(
+    el('div', {
+      style: { marginBottom: '4px' },
+      children: [
+        el('span', {
+          text: statusLabels[sos.status] || sos.status,
+          style: {
+            background: color,
+            color: 'white',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontSize: '10px',
+          },
+        }),
+      ],
+    })
+  );
+
+  // Données citoyen (VARIABLES — risquées si on utilisait innerHTML)
+  if (sos.citizenName) {
+    children.push(
+      el('div', {
+        text: sos.citizenName,
+        style: { fontSize: '12px', fontWeight: 500 },
+      })
+    );
+  }
+  if (sos.citizenPhone) {
+    children.push(
+      el('div', {
+        text: `📞 ${sos.citizenPhone}`,
+        style: { fontSize: '11px', color: '#666' },
+      })
+    );
+  }
+  if (sos.locationText) {
+    children.push(
+      el('div', {
+        text: `📍 ${sos.locationText}`,
+        style: { fontSize: '11px', color: '#666', marginTop: '2px' },
+      })
+    );
+  }
+  if (sos.notes) {
+    children.push(
+      el('div', {
+        text: `📝 ${sos.notes}`,
+        style: { fontSize: '11px', color: '#666', marginTop: '2px' },
+      })
+    );
+  }
+
+  // Dates / coords (valeurs internes, mais on reste cohérent avec textContent)
+  children.push(
+    el('div', {
+      text: `📅 ${new Date(sos.createdAt).toLocaleString('fr-FR')}`,
+      style: { fontSize: '10px', color: '#999', marginTop: '4px' },
+    })
+  );
+  children.push(
+    el('div', {
+      text: `📌 ${sos.latitude.toFixed(4)}, ${sos.longitude.toFixed(4)}`,
+      style: { fontSize: '10px', color: '#999', fontFamily: 'monospace' },
+    })
+  );
+
+  return el('div', {
+    style: { padding: '8px', minWidth: '220px' },
+    children,
+  });
+}
+
 export function LiveMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MaplibreMap | null>(null);
@@ -130,19 +279,40 @@ export function LiveMap() {
   const [connected, setConnected] = useState(false);
   const [nearestCommissariat, setNearestCommissariat] = useState<string | null>(null);
 
+  // Récupère le JWT stocké après login (pour authentifier les appels backend)
+  function getAuthToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('pnc_auth_user');
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      return parsed?.token ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  function authHeaders(): Record<string, string> {
+    const token = getAuthToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   // Charger les données initiales
   useEffect(() => {
+    let active = true;
+    const headers = authHeaders();
     Promise.all([
-      fetch('/api/map/active-sos?XTransformPort=3001').then((r) => r.json()),
-      fetch('/api/map/commissariats?XTransformPort=3001').then((r) => r.json()),
+      fetch('/api/map/active-sos?XTransformPort=3001', { headers }).then((r) => r.json()),
+      fetch('/api/map/commissariats?XTransformPort=3001', { headers }).then((r) => r.json()),
     ])
       .then(([sosData, comData]) => {
+        if (!active) return;
         if (sosData?.features) {
           const sos: SosFeature[] = sosData.features.map((f: any) => ({
             id: f.properties.id,
             reference: f.properties.reference,
             citizenName: f.properties.citizenName,
-            citizenPhone: f.properties.citizenPhone,
+            citizenPhone: f.properties.phone ?? f.properties.citizenPhone,
             status: f.properties.status,
             createdAt: f.properties.createdAt,
             latitude: f.geometry.coordinates[1],
@@ -163,7 +333,12 @@ export function LiveMap() {
           setCommissariats(coms);
         }
       })
-      .catch(console.error);
+      .catch((err) => {
+        if (isDev) console.error('LiveMap: erreur chargement initial:', err);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Initialiser la carte
@@ -204,7 +379,7 @@ export function LiveMap() {
     };
   }, []);
 
-  // Marqueurs commissariats (stables)
+  // Marqueurs commissariats (stables) — popups en DOM sécurisé (anti-XSS)
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
@@ -213,19 +388,13 @@ export function LiveMap() {
     commissariatMarkersRef.current.clear();
 
     commissariats.forEach((com) => {
-      const el = document.createElement('div');
-      const root = createRoot(el);
+      const pinEl = document.createElement('div');
+      const root = createRoot(pinEl);
       root.render(<CommissariatPin />);
-      const marker = new Marker({ element: el })
+      const marker = new Marker({ element: pinEl })
         .setLngLat([com.longitude, com.latitude])
         .setPopup(
-          new Popup({ offset: 25 }).setHTML(
-            `<div style="padding: 8px; min-width: 180px;">
-              <strong>${com.name}</strong><br/>
-              <span style="font-size: 11px; color: #666;">Code: ${com.code}</span><br/>
-              <span style="font-size: 11px; color: #999;">Commissariat PNC</span>
-            </div>`
-          )
+          new Popup({ offset: 25 }).setDOMContent(buildCommissariatPopup(com))
         )
         .addTo(map);
       commissariatMarkersRef.current.set(com.id, marker);
@@ -245,55 +414,23 @@ export function LiveMap() {
       }
     });
 
-    // Ajouter / mettre à jour les marqueurs
+    // Ajouter / mettre à jour les marqueurs — popups en DOM sécurisé (anti-XSS)
     activeSos.forEach((sos) => {
       const color = statusColors[sos.status] || '#ef4444';
       const existing = sosMarkersRef.current.get(sos.id);
       if (existing) {
-        // Mettre à jour le popup
+        // Mettre à jour le popup (DOM safe, pas d'interpolation HTML)
         existing.setPopup(
-          new Popup({ offset: 25, maxWidth: 280 }).setHTML(
-            `<div style="padding: 8px; min-width: 220px;">
-              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                <strong style="font-size: 12px; font-family: monospace;">${sos.reference}</strong>
-              </div>
-              <div style="margin-bottom: 4px;">
-                <span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">
-                  ${statusLabels[sos.status] || sos.status}
-                </span>
-              </div>
-              ${sos.citizenName ? `<div style="font-size: 12px; font-weight: 500;">${sos.citizenName}</div>` : ''}
-              ${sos.citizenPhone ? `<div style="font-size: 11px; color: #666;">📞 ${sos.citizenPhone}</div>` : ''}
-              ${sos.locationText ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">📍 ${sos.locationText}</div>` : ''}
-              <div style="font-size: 10px; color: #999; margin-top: 4px;">📅 ${new Date(sos.createdAt).toLocaleString('fr-FR')}</div>
-              <div style="font-size: 10px; color: #999; font-family: monospace;">📌 ${sos.latitude.toFixed(4)}, ${sos.longitude.toFixed(4)}</div>
-            </div>`
-          )
+          new Popup({ offset: 25, maxWidth: 280 }).setDOMContent(buildSosPopup(sos))
         );
       } else {
-        const el = document.createElement('div');
-        const root = createRoot(el);
+        const pinEl = document.createElement('div');
+        const root = createRoot(pinEl);
         root.render(<SosPin color={color} />);
-        const marker = new Marker({ element: el })
+        const marker = new Marker({ element: pinEl })
           .setLngLat([sos.longitude, sos.latitude])
           .setPopup(
-            new Popup({ offset: 25, maxWidth: 280 }).setHTML(
-              `<div style="padding: 8px; min-width: 220px;">
-                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                  <strong style="font-size: 12px; font-family: monospace;">${sos.reference}</strong>
-                </div>
-                <div style="margin-bottom: 4px;">
-                  <span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">
-                    ${statusLabels[sos.status] || sos.status}
-                  </span>
-                </div>
-                ${sos.citizenName ? `<div style="font-size: 12px; font-weight: 500;">${sos.citizenName}</div>` : ''}
-                ${sos.citizenPhone ? `<div style="font-size: 11px; color: #666;">📞 ${sos.citizenPhone}</div>` : ''}
-                ${sos.locationText ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">📍 ${sos.locationText}</div>` : ''}
-                <div style="font-size: 10px; color: #999; margin-top: 4px;">📅 ${new Date(sos.createdAt).toLocaleString('fr-FR')}</div>
-                <div style="font-size: 10px; color: #999; font-family: monospace;">📌 ${sos.latitude.toFixed(4)}, ${sos.longitude.toFixed(4)}</div>
-              </div>`
-            )
+            new Popup({ offset: 25, maxWidth: 280 }).setDOMContent(buildSosPopup(sos))
           )
           .addTo(map);
         sosMarkersRef.current.set(sos.id, marker);
@@ -307,7 +444,8 @@ export function LiveMap() {
           });
           // Commissariat le plus proche
           fetch(
-            `/api/map/nearest-commissariat?lat=${sos.latitude}&lon=${sos.longitude}&XTransformPort=3001`
+            `/api/map/nearest-commissariat?lat=${sos.latitude}&lon=${sos.longitude}&XTransformPort=3001`,
+            { headers: authHeaders() }
           )
             .then((r) => r.json())
             .then((d) => {
@@ -321,14 +459,16 @@ export function LiveMap() {
 
   // Connexion Socket.io pour le temps réel
   useEffect(() => {
+    const token = getAuthToken();
     const socket = io('/?XTransformPort=3001', {
       transports: ['websocket', 'polling'],
+      auth: { token: token ?? undefined },
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
       setConnected(true);
-      console.log('🟢 Connecté au backend temps réel (NestJS + Socket.io)');
+      log('🟢 Connecté au backend temps réel (NestJS + Socket.io)');
     });
 
     socket.on('disconnect', () => {
@@ -336,7 +476,7 @@ export function LiveMap() {
     });
 
     socket.on('sos:new', (sos: SosFeature) => {
-      console.log('🚨 Nouveau SOS reçu:', sos.reference);
+      log('🚨 Nouveau SOS reçu:', sos.reference);
       setActiveSos((prev) => {
         if (prev.find((s) => s.id === sos.id)) return prev;
         return [sos, ...prev];
@@ -350,7 +490,7 @@ export function LiveMap() {
     });
 
     socket.on('alert:new', (alert: any) => {
-      console.log('📝 Nouveau signalement:', alert.reference);
+      log('📝 Nouveau signalement:', alert?.reference);
     });
 
     return () => {

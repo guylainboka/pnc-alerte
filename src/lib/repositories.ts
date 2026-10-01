@@ -4,7 +4,7 @@
  * Fournit une interface unifiée pour lire/écrire les données.
  *
  * - Si Supabase est configuré → utilise le backend Supabase partagé (PostgreSQL)
- * - Sinon → utilise la base locale SQLite via Prisma (mode démo)
+ * - Sinon → utilise la base locale SQLite via Prisma
  *
  * Le centre de commande ET l'application mobile pointent vers le MÊME backend
  * Supabase. Ainsi, une alerte envoyée depuis le mobile apparaît instantanément

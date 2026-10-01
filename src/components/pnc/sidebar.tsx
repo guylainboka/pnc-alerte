@@ -91,7 +91,7 @@ export function Sidebar() {
           <div className="flex items-center gap-3 p-2 rounded-lg bg-sidebar-accent/30">
             <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-sidebar">
-                {user.firstName[0]}{user.lastName[0]}
+                {user.firstName?.[0] ?? '?'}{user.lastName?.[0] ?? ''}
               </span>
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">

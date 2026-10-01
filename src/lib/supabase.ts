@@ -28,7 +28,7 @@ export const isSupabaseConfigured = Boolean(
 /**
  * Détermine le mode de fonctionnement du backend.
  * - "supabase" : backend Supabase partagé (production)
- * - "local"    : SQLite/Prisma local (démo/développement)
+ * - "local"    : SQLite/Prisma local (développement)
  */
 export type BackendMode = 'supabase' | 'local';
 

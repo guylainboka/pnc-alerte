@@ -26,11 +26,12 @@ export class CreateSosDto {
 
   @IsNumber()
   @Type(() => Number)
-  latitude: number;
+  // Assigné par class-transformer (ValidationPipe transform: true).
+  latitude!: number;
 
   @IsNumber()
   @Type(() => Number)
-  longitude: number;
+  longitude!: number;
 
   @IsString()
   @IsOptional()
@@ -47,11 +48,13 @@ export class CreateSosDto {
 
 /**
  * DTO de mise à jour du statut d'un SOS — appelé par le centre de commandement.
+ * Tous les champs sont optionnels (PATCH = mise à jour partielle).
  */
 export class UpdateSosDto {
   @IsString()
+  @IsOptional()
   @IsIn(SOS_STATUSES as unknown as string[])
-  status: SosStatus;
+  status?: SosStatus;
 
   @IsString()
   @IsOptional()
