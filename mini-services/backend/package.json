@@ -1,0 +1,28 @@
+{
+  "name": "pnc-backend",
+  "version": "1.0.0",
+  "description": "PNC Command Center - NestJS backend (PGlite + Socket.io + Turf.js)",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12",
+    "@nestjs/core": "^12",
+    "@nestjs/platform-express": "^12",
+    "@nestjs/platform-socket.io": "^12",
+    "@nestjs/websockets": "^12",
+    "@electric-sql/pglite": "^0.5",
+    "@turf/turf": "^7",
+    "class-validator": "^0.14",
+    "class-transformer": "^0.5",
+    "reflect-metadata": "^0.2",
+    "rxjs": "^7",
+    "socket.io": "^4",
+    "uuid": "^11"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20"
+  }
+}

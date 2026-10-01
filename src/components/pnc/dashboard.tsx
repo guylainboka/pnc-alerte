@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Building2,
   Shield,
+  Map as MapIcon,
 } from 'lucide-react';
+import { LiveMap } from '@/components/pnc/live-map';
 import {
   BarChart,
   Bar,
@@ -133,6 +135,20 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Carte Live temps réel — Maplibre GL + Socket.io */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <MapIcon className="w-4 h-4 text-primary" />
+            Carte Opérationnelle en Direct
+          </h3>
+          <span className="text-[10px] text-muted-foreground">
+            Maplibre GL + Socket.io · Backend NestJS :3001
+          </span>
+        </div>
+        <LiveMap />
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-red-500">

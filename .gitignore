@@ -52,3 +52,44 @@ prompt
 server.log
 # Skills directory
 /skills/
+# PNC specific - added for production build
+# Mini-services: keep source code, ignore runtime data
+mini-services/*/node_modules/
+mini-services/*/data/
+mini-services/*/backend.log
+mini-services/*/*.log
+
+# Database files (PGlite embedded)
+*.db
+*.db-shm
+*.db-wal
+/prisma/db/
+
+# Build artifacts
+/dist/
+/build/
+/win-unpacked/
+*.exe
+*.msi
+*.appx
+
+# Tauri/Electron build
+/src-tauri/target/
+
+# Keep .env.example tracked but not .env.local
+!.env.example
+
+# Screenshots
+*.png
+!public/*.png
+!docs/*.png
+
+# Agent context (internal)
+/agent-ctx/
+
+# Runtime PID
+/.zscripts/
+*.pid
+
+# Local SQLite database (mode démo)
+/db/
