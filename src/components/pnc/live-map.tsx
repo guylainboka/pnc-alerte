@@ -421,7 +421,7 @@ export function LiveMap() {
       if (existing) {
         // Mettre à jour le popup (DOM safe, pas d'interpolation HTML)
         existing.setPopup(
-          new Popup({ offset: 25, maxWidth: 280 }).setDOMContent(buildSosPopup(sos))
+          new Popup({ offset: 25, maxWidth: '280px' }).setDOMContent(buildSosPopup(sos))
         );
       } else {
         const pinEl = document.createElement('div');
@@ -430,7 +430,7 @@ export function LiveMap() {
         const marker = new Marker({ element: pinEl })
           .setLngLat([sos.longitude, sos.latitude])
           .setPopup(
-            new Popup({ offset: 25, maxWidth: 280 }).setDOMContent(buildSosPopup(sos))
+            new Popup({ offset: 25, maxWidth: '280px' }).setDOMContent(buildSosPopup(sos))
           )
           .addTo(map);
         sosMarkersRef.current.set(sos.id, marker);

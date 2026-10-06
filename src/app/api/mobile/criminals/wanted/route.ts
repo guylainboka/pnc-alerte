@@ -27,7 +27,7 @@ export async function GET() {
             'id, reference, first_name, last_name, alias, photo, gender, nationality, physical_desc, height, weight, eye_color, hair_color, scars, tattoos, danger_level, last_known_addr, last_seen_location, last_seen_at, modus_operandi, warrant_status'
           )
           .eq('status', 'recherche')
-          .order('danger_level', { ascending: 'desc' });
+          .order('danger_level', { ascending: false });
         if (error) throw error;
         return NextResponse.json({ wanted: data || [] });
       }
