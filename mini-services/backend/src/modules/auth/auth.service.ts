@@ -10,8 +10,10 @@
 import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { queryOne, exec } from '../../common/database/pg.client';
+import { randomUUID } from 'node:crypto';
+import { queryOne, query, exec } from '../../common/database/pg.client';
 import { getJwtSecret, verifyJwt } from '../../common/auth/jwt';
+import { RegisterDto } from './register.dto';
 
 export interface LoginPayload {
   username: string;
@@ -139,6 +141,74 @@ export class AuthService {
       commissariatId: row.commissariat_id ?? null,
       officerId: row.officer_id ?? null,
       isActive: row.is_active,
+      accessToken,
+    };
+  }
+
+  /**
+   * Inscription d'un nouvel agent du personnel PNC.
+   *
+   * Règles métier :
+   *  - username et email uniques (409 sinon)
+   *  - mot de passe haché avec bcrypt (10 tours)
+   *  - rôle par défaut : `agent` (moindre privilège — l'élévation reste
+   *    réservée aux administrateurs)
+   *  - compte actif immédiatement (is_active = true)
+   *
+   * Retourne le même contrat que `login` (AuthenticatedUser + accessToken)
+   * afin que le client puisse enchaîner directement sur une session ouverte.
+   */
+  async register(dto: RegisterDto): Promise<AuthenticatedUser> {
+    const username = dto.username.trim().toLowerCase();
+    const email = dto.email.trim().toLowerCase();
+    const firstName = dto.firstName.trim();
+    const lastName = dto.lastName.trim();
+    const phone = dto.phone?.trim() || null;
+
+    // 1. Unicité username / email (requête unique, insensible à la casse)
+    const duplicates = await query<{ username: string; email: string }>(
+      `SELECT username, email FROM users_pnc
+       WHERE LOWER(username) = $1 OR LOWER(email) = $2
+       LIMIT 2`,
+      [username, email],
+    );
+    if (duplicates.length > 0) {
+      const dupUser = duplicates.some((d) => d.username.toLowerCase() === username);
+      throw new HttpException(
+        dupUser
+          ? "Ce nom d'utilisateur est déjà utilisé"
+          : 'Cette adresse email est déjà utilisée',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    // 2. Hachage bcrypt (10 tours — même politique que le seed et login)
+    const passwordHash = bcrypt.hashSync(dto.password, 10);
+
+    // 3. Insertion (rôle agent, compte actif)
+    const id = randomUUID();
+    await exec(
+      `INSERT INTO users_pnc
+         (id, username, email, password_hash, first_name, last_name, role, phone, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, 'agent', $7, true)`,
+      [id, username, email, passwordHash, firstName, lastName, phone],
+    );
+
+    this.logger.log(`Nouvelle inscription — user=${username} role=agent`);
+
+    // 4. Session ouverte immédiatement (même contrat que login)
+    const accessToken = makeToken(id, username, 'agent');
+    return {
+      id,
+      username,
+      email,
+      firstName,
+      lastName,
+      role: 'agent',
+      phone,
+      commissariatId: null,
+      officerId: null,
+      isActive: true,
       accessToken,
     };
   }

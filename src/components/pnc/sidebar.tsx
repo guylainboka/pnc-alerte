@@ -42,20 +42,21 @@ export function Sidebar() {
         sidebarCollapsed ? 'w-[68px]' : 'w-[260px]'
       )}
     >
-      {/* Logo */}
+      {/* Logo officiel PNC — image originale non modifiée */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-sidebar-border">
-        <div className="relative w-10 h-10 flex-shrink-0">
+        <div className="relative w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden ring-1 ring-sidebar-border shadow-md">
           <Image
-            src="/pnc-icon.png"
-            alt="PNC"
+            src="/pnc-logo.png"
+            alt="Logo Police Nationale Congolaise"
             width={40}
             height={40}
-            className="rounded"
+            className="object-cover"
+            priority
           />
         </div>
         {!sidebarCollapsed && (
           <div className="overflow-hidden">
-            <h1 className="text-sm font-bold text-sidebar-primary leading-tight">PNC</h1>
+            <h1 className="text-sm font-bold text-sidebar-primary leading-tight">PNC Alerte</h1>
             <p className="text-[10px] text-sidebar-foreground/70 leading-tight">Centre de Commandement</p>
           </div>
         )}

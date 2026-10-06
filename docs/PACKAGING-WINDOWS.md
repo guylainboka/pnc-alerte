@@ -32,8 +32,8 @@ src-tauri/
 ├── tauri.conf.json         # Config Tauri (window, app, bundle)
 ├── build.rs
 ├── icons/
-│   ├── icon.ico            # Icône Windows (convertir depuis /public/pnc-icon.png)
-│   └── icon.png
+│   ├── icon.ico            # Icône Windows (convertir depuis /public/icons/icon-256.png)
+│   └── icon.png            # = /public/icons/icon-512.png (logo officiel redimensionné)
 └── src/
     └── main.rs             # Point d'entrée Rust (lance le sidecar NestJS + charge la fenêtre)
 ```
@@ -236,7 +236,8 @@ start "" "http://localhost:3001"
 - [ ] La base de données PostgreSQL+PostGIS est configurée sur la machine cible
 - [ ] Le fichier `.env.local` de production a le bon `DATABASE_URL`
 - [ ] Le `JWT_SECRET` est une chaîne aléatoire de 64 caractères (pas la valeur par défaut)
-- [ ] L'icône `pnc-icon.png` a été convertie en `icon.ico` pour Windows
+- [ ] Les icônes ont été (re)générées via `bun run scripts/generate-icons.mjs` (redimensionnement du logo officiel `public/pnc-logo.png`)
+- [ ] L'icône `public/icons/icon-256.png` a été convertie en `icon.ico` pour Windows
 - [ ] L'installateur a été testé sur une machine Windows propre
 - [ ] Le logiciel démarre automatiquement avec Windows (optionnel : task scheduler)
 

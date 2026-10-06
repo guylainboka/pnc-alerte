@@ -82,6 +82,7 @@ mini-services/*/*.log
 # Screenshots
 *.png
 !public/*.png
+!public/icons/*.png
 !docs/*.png
 
 # Agent context (internal)
@@ -97,3 +98,6 @@ mini-services/*/*.log
 # Tool results (internal)
 /tool-results/
 /worklog.md
+
+# Environnement local (sandbox)
+/tests/

@@ -47,6 +47,15 @@ export interface AuthUser {
   } | null;
 }
 
+interface RegisterInput {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  password: string;
+  phone?: string;
+}
+
 interface AppStore {
   activeSection: Section;
   setActiveSection: (section: Section) => void;
@@ -62,6 +71,13 @@ interface AppStore {
    * authentifiés ultérieurs.
    */
   login: (username: string, password: string) => Promise<void>;
+  /**
+   * Inscrit un nouvel agent du personnel PNC contre le backend NestJS
+   * (POST /api/auth/register?XTransformPort=3001). Le backend retourne le
+   * même contrat que login (accessToken inclus) — la session est donc
+   * ouverte immédiatement après l'inscription.
+   */
+  register: (input: RegisterInput) => Promise<void>;
   logout: () => void;
 }
 
@@ -81,6 +97,26 @@ function loadUser(): AuthUser | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Transforme la réponse plate du backend NestJS
+ *   { id, username, email, firstName, lastName, role, phone,
+ *     commissariatId, officerId, isActive, accessToken }
+ * en AuthUser (token extrait) puis la persiste en localStorage.
+ * Partagé par login() et register() pour éviter toute duplication.
+ */
+function persistAuthResponse(data: Record<string, unknown>): AuthUser {
+  const { accessToken, ...userFields } = data;
+  const userWithToken: AuthUser = {
+    ...(userFields as Omit<AuthUser, 'token'>),
+    token: accessToken as string,
+  };
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userWithToken));
+  }
+  return userWithToken;
 }
 
 export const useAppStore = create<AppStore>((set) => {
@@ -104,7 +140,7 @@ export const useAppStore = create<AppStore>((set) => {
         let message = 'Identifiants invalides';
         try {
           const errBody = await res.json();
-          if (errBody?.message) message = errBody.message;
+          if (errBody?.message) message = Array.isArray(errBody.message) ? errBody.message.join(', ') : errBody.message;
         } catch {
           // ignore parse error — keep default message
         }
@@ -112,19 +148,33 @@ export const useAppStore = create<AppStore>((set) => {
       }
 
       const data = await res.json();
-      // Le backend NestJS retourne une forme plate :
-      //   { id, username, email, firstName, lastName, role, phone,
-      //     commissariatId, officerId, isActive, accessToken }
-      // On extrait le token sous `token` et on garde le reste comme user.
-      const { accessToken, ...userFields } = data;
-      const userWithToken: AuthUser = {
-        ...userFields,
-        token: accessToken,
-      };
+      const userWithToken = persistAuthResponse(data);
+      set({ user: userWithToken, isAuthenticated: true });
+    },
+    register: async (input) => {
+      const res = await fetch('/api/auth/register?XTransformPort=3001', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userWithToken));
+      if (!res.ok) {
+        let message = "Échec de l'inscription";
+        try {
+          const errBody = await res.json();
+          if (errBody?.message) {
+            message = Array.isArray(errBody.message)
+              ? errBody.message.join(', ')
+              : errBody.message;
+          }
+        } catch {
+          // ignore parse error — keep default message
+        }
+        throw new Error(message);
       }
+
+      const data = await res.json();
+      const userWithToken = persistAuthResponse(data);
       set({ user: userWithToken, isAuthenticated: true });
     },
     logout: () => {
