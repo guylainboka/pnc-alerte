@@ -25,12 +25,20 @@ import {
   Popup,
   NavigationControl,
   ScaleControl,
+  setWorkerUrl,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { io, Socket } from 'socket.io-client';
 import { Siren, Building2, Navigation } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { Badge } from '@/components/ui/badge';
+
+// Le bundler Next.js casse la résolution du worker embarqué de MapLibre
+// (« Worker failed to load »). On sert explicitement le worker depuis /public
+// (copié de node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs).
+if (typeof window !== 'undefined') {
+  setWorkerUrl('/maplibre-gl-worker.mjs');
+}
 
 const isDev = process.env.NODE_ENV !== 'production';
 const log = (...args: unknown[]) => {
