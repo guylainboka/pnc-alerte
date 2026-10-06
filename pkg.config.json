@@ -1,0 +1,8 @@
+{
+  "name": "pnc-command-center",
+  "version": "1.0.0",
+  "pkg": {
+    "targets": ["node22-linux-x64"],
+    "outputPath": "dist-test"
+  }
+}

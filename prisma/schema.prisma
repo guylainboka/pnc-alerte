@@ -1,7 +1,9 @@
 // PNC - Police Nationale Congolaise - Centre de Commandement
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "windows" : embarque le moteur de requête Windows (DLL) pour l'EXE packagé
+  binaryTargets = ["native", "windows"]
 }
 
 datasource db {

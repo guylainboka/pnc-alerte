@@ -12,17 +12,60 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Chemin absolu vers le dossier de données — résolu depuis ce fichier
-// (`src/common/database/pg.client.ts`). Le dossier `data/` est donc toujours
-// créé sous `<backend>/data`, peu importe le process.cwd().
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const BACKEND_ROOT = path.resolve(__dirname, '..', '..', '..');
-const DATA_DIR = path.join(BACKEND_ROOT, 'data');
+/**
+ * Détecte si le backend tourne comme binaire compilé (`bun build --compile`,
+ * ex. PNC-Backend.exe sur Windows). Dans ce cas `import.meta.url` pointe vers
+ * un chemin virtuel interne au bundle : on résout donc le dossier de données
+ * depuis l'emplacement réel de l'exécutable (process.execPath).
+ */
+function isCompiledBinary(): boolean {
+  // `Bun.embeddedFiles` n'existe que dans les binaires produits par --compile
+  return Array.isArray((globalThis as any).Bun?.embeddedFiles);
+}
+
+// Chemin absolu vers le dossier de données :
+//  - binaire compilé : `<dossier de l'EXE>/pnc-data` (données à côté du .exe)
+//  - dev / source    : résolu depuis ce fichier (`src/common/database/pg.client.ts`),
+//                      le dossier `data/` est donc toujours créé sous `<backend>/data`.
+const DATA_DIR = isCompiledBinary()
+  ? path.join(path.dirname(process.execPath), 'pnc-data')
+  : path.join(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        '..'
+      ),
+      'data'
+    );
 
 // S'assurer que le dossier existe avant d'instancier PGlite
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// ============================================================================
+// Assets PGlite en mode binaire compilé (PNC-Backend.exe)
+// ============================================================================
+// Dans un binaire `bun build --compile`, PGlite ne peut plus résoudre ses
+// fichiers embarqués (`pglite.wasm`, `pglite.data`, `initdb.wasm`) référencés
+// via `new URL(..., import.meta.url)` : l'image filesystem EMSCRIPTEN n'est
+// pas intégrée au bundle. On les charge donc depuis le dossier `pglite-assets/`
+// placé à côté de l'exécutable et on les passe explicitement au constructeur.
+// En mode dev/source, PGlite charge ses assets normalement depuis node_modules.
+// ============================================================================
+const ASSETS_DIR = path.join(path.dirname(process.execPath), 'pglite-assets');
+
+function loadPgliteAsset(name: string): Buffer {
+  const file = path.join(ASSETS_DIR, name);
+  if (!fs.existsSync(file)) {
+    throw new Error(
+      `[db] Asset PGlite manquant : ${file}. ` +
+        `Copiez le dossier "pglite-assets" (pglite.wasm, pglite.data, initdb.wasm) ` +
+        `à côté de l'exécutable PNC-Backend.`
+    );
+  }
+  return fs.readFileSync(file);
 }
 
 // Singleton global — on évite de créer plusieurs instances PGlite
@@ -38,10 +81,27 @@ export async function getPgClient(): Promise<PGlite> {
   }
 
   console.log(`[db] Initialisation de PGlite dans ${DATA_DIR} ...`);
-  _pg = new PGlite({
-    dataDir: path.join(DATA_DIR, 'pnc.db'),
-    debug: 0,
-  });
+
+  if (isCompiledBinary()) {
+    // Mode binaire compilé : assets PGlite chargés explicitement depuis le disque
+    const fsData = loadPgliteAsset('pglite.data');
+    const wasm = loadPgliteAsset('pglite.wasm');
+    const initdb = loadPgliteAsset('initdb.wasm');
+    const WebAssemblyRef = (globalThis as any).WebAssembly;
+    _pg = new PGlite({
+      dataDir: path.join(DATA_DIR, 'pnc.db'),
+      debug: 0,
+      fsBundle: new Blob([fsData]),
+      pgliteWasmModule: await WebAssemblyRef.compile(wasm),
+      initdbWasmModule: await WebAssemblyRef.compile(initdb),
+    } as any);
+  } else {
+    // Mode dev / source : PGlite résout ses assets depuis node_modules
+    _pg = new PGlite({
+      dataDir: path.join(DATA_DIR, 'pnc.db'),
+      debug: 0,
+    });
+  }
 
   // Attendre que PGlite soit prêt (la première requête force l'init)
   await _pg.query('SELECT 1 as ok');

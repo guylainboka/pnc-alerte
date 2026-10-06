@@ -2,6 +2,70 @@
 
 Ce document explique comment packager le Centre de Commandement PNC comme **logiciel installable sur Windows** (fichier `.exe` ou `.msi`).
 
+## ✅ Méthode 4 : Build croisé depuis Linux (DÉJÀ EFFECTUÉ — artifacts fournis)
+
+Le dépôt contient désormais un **pipeline de build croisé** qui produit les exécutables Windows directement depuis Linux (aucune machine Windows requise). Deux outils sont utilisés :
+
+| Outil | Rôle | Commande |
+|---|---|---|
+| `bun build --compile --target=bun-windows-x64` | Backend NestJS → `PNC-Backend.exe` (runtime Bun embarqué, PGlite WASM) | Voir § Backend |
+| `@yao-pkg/pkg --target node22-win-x64` | Frontend Next.js → `PNC-Command-Center.exe` (runtime Node 22 embarqué) | Voir § Frontend |
+
+### Artifacts produits (`dist/`)
+
+```
+dist/
+├── PNC-Backend.exe                # 98 Mo — backend NestJS autonome (port 3001)
+├── PNC-Command-Center.exe         # 55 Mo — lanceur Node 22 + app Next.js (port 3000)
+├── PNC-Alerte-Windows/            # package portable complet
+│   ├── PNC-Command-Center.exe
+│   ├── PNC-Backend.exe
+│   ├── app/                       # build standalone Next.js (fichiers réels)
+│   ├── db/custom.db               # base SQLite du centre de commandement
+│   ├── pglite-assets/             # pglite.wasm, pglite.data, initdb.wasm
+│   ├── Demarrer-PNC.bat           # démarrage complet + navigateur
+│   ├── Arreter-PNC.bat            # arrêt propre
+│   └── LISEZMOI-WINDOWS.txt       # guide utilisateur (installation, comptes démo)
+└── PNC-Alerte-Windows-1.0.0.zip   # archive de distribution (~150 Mo)
+```
+
+### Fonctionnement du package
+
+1. `Demarrer-PNC.bat` lance `PNC-Backend.exe` (NestJS + PGlite, données dans `pnc-data/`) puis `PNC-Command-Center.exe`
+2. Le lanceur embarque un runtime Node.js : il définit les variables par défaut (`DATABASE_URL`, `JWT_SECRET`, `PORT`) et charge `app/server.js`
+3. Le frontend Next.js proxifie les appels `?XTransformPort=3001` vers `127.0.0.1:3001` via les **rewrites** de `next.config.ts` (aucune gateway Caddy requise sur Windows)
+4. Le navigateur s'ouvre sur `http://localhost:3000` — compte démo : `admin / admin123`
+
+### Points techniques importants (leçons du build)
+
+- **PGlite en binaire compilé** : `pglite.data` (image filesystem EMSCRIPTEN) ne peut pas être intégré au bundle Bun. Le backend charge donc `pglite.wasm`, `pglite.data` et `initdb.wasm` depuis le dossier `pglite-assets/` à côté de l'EXE (voir `pg.client.ts`, mode `isCompiledBinary()` via `Bun.embeddedFiles`).
+- **pkg + Next.js standalone** : le tracer statique de pkg ne gère pas les `require()` à chemin calculé de Next 16. L'EXE est donc un **lanceur léger** (runtime Node + `scripts/pkg-launcher.js`) qui charge l'application depuis le dossier réel `app/` — fiable à 100 %.
+- **`process.chdir()`** vers `/snapshot/...` est impossible sous pkg : le lanceur exécute `chdir` sur un dossier réel.
+- **`node:inspector`** est absent du runtime pkg : `scripts/pkg-launcher.js` injecte un stub (Next l'utilise uniquement pour afficher le port du debugger).
+- **Prisma** : `binaryTargets = ["native", "windows"]` dans `schema.prisma` génère `query_engine-windows.dll.node` ; le chemin SQLite est résolu depuis `process.execPath` (slashs normalisés pour Prisma).
+- **Images** : `images.unoptimized = true` supprime la dépendance au module natif `sharp` dans l'EXE.
+
+### Reconstruire les EXE
+
+```bash
+# 0. Build du frontend standalone
+bun run db:generate && bun run build
+
+# 1. Backend Windows (cross-compile)
+cd mini-services/backend
+bun build --compile --target=bun-windows-x64 --external @nestjs/microservices \
+  index.ts --outfile ../../dist/PNC-Backend.exe
+cd ../..
+
+# 2. Lanceur frontend Windows
+bunx pkg scripts/pkg-launcher.js --config pkg.config.json \
+  --target node22-win-x64 --output dist/PNC-Command-Center.exe
+
+# 3. Assembler dist/PNC-Alerte-Windows/ (voir structure ci-dessus) puis zipper
+```
+
+---
+
 ## 🎯 Objectif
 
 L'utilisateur final (le commissaire de police, l'opérateur du centre de contrôle) doit pouvoir :
@@ -13,7 +77,7 @@ L'utilisateur final (le commissaire de police, l'opérateur du centre de contrô
 
 ---
 
-## 🛠️ Méthode 1 : Tauri (RECOMMANDÉ — binaire léger ~10 Mo)
+## 🛠️ Méthode 1 : Tauri (RECOMMANDÉ pour un installateur signé — binaire léger ~10 Mo)
 
 Tauri embarque le frontend web dans une fenêtre native Windows en utilisant le WebView2 (déjà installé sur Windows 10/11). Le backend NestJS tourne comme sidecar (processus enfant).
 
